@@ -58,7 +58,7 @@ services:
       context: ./news-server
       dockerfile: ../infrastructure/docker/Dockerfile.api
     container_name: news-api
-    image: wign/news-api:latest
+    image: wign/news-server:latest
     restart: unless-stopped
     ports:
       - "8000:8000"
