@@ -150,8 +150,8 @@ services:
     build:
       context: ./wr-bot
       dockerfile: ../infrastructure/docker/Dockerfile.bot
-    container_name: discord-bot
-    image: wign/discord-bot:latest
+    container_name: bot-discord
+    image: wign/bot-discord:latest
     restart: unless-stopped
     volumes:
       - bot_data:/app/data
