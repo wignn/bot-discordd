@@ -24,7 +24,6 @@ def fetch_all_rss_feeds(self):
                 total_entries=total_entries,
             )
             
-            # Queue articles for processing
             for url, entries in results.items():
                 for entry in entries:
                     process_rss_entry.delay(entry.__dict__, url)
@@ -59,9 +58,8 @@ def fetch_single_feed(self, feed_url: str, source_id: str):
 @shared_task(bind=True)
 def process_rss_entry(self, entry_data: dict, feed_url: str, source_id: str = None):
     import hashlib
-    import asyncio
     from sqlalchemy import text
-    from app.core.database import get_async_session
+    from app.db.session import get_sync_db
     from workers.tasks.scraping_tasks import scrape_article
     from workers.tasks.ai_tasks import process_article_ai
     
@@ -70,20 +68,16 @@ def process_rss_entry(self, entry_data: dict, feed_url: str, source_id: str = No
     title = entry_data.get("title", "")
     content_hash = hashlib.sha256(f"{url}{title}".encode()).hexdigest()
     
-    # Check if already processed
-    async def check_exists():
-        async for session in get_async_session():
-            result = await session.execute(
+    # Check if already processed (using sync session for Celery workers)
+    try:
+        with get_sync_db() as session:
+            result = session.execute(
                 text("SELECT 1 FROM news_articles WHERE content_hash = :hash LIMIT 1"),
                 {"hash": content_hash}
             )
-            return result.scalar() is not None
-    
-    try:
-        already_exists = asyncio.run(check_exists())
-        if already_exists:
-            logger.debug("Article already exists, skipping", url=url[:50])
-            return {"status": "skipped", "reason": "duplicate", "url": url}
+            if result.scalar() is not None:
+                logger.debug("Article already exists, skipping", url=url[:50])
+                return {"status": "skipped", "reason": "duplicate", "url": url}
     except Exception as e:
         logger.warning("Failed to check duplicate, processing anyway", error=str(e))
     
@@ -94,12 +88,15 @@ def process_rss_entry(self, entry_data: dict, feed_url: str, source_id: str = No
     )
     
     content = entry_data.get("content", "")
+    description = entry_data.get("summary", "") or entry_data.get("description", "")
+    
     if len(content) < 500:
         scrape_article.delay(url, entry_data)
     else:
         process_article_ai.delay({
             "title": title,
             "content": content,
+            "description": description,  # RSS description field
             "url": url,
             "content_hash": content_hash,
             "published_at": entry_data.get("published_at"),

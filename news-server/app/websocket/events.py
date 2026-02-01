@@ -42,52 +42,69 @@ class NewsEvent:
         }
         color = color_map.get(self.sentiment, 0x0099FF)
         
-        impact_emoji = {
-            "high": "🔴",
-            "medium": "🟡", 
-            "low": "🟢",
+        impact_bars = {
+            "high": "▰▰▰",
+            "medium": "▰▰▱",
+            "low": "▰▱▱",
         }
+        impact_bar = impact_bars.get(self.impact_level, "▰▰▰")
         
-        fields = []
+        category = "MARKET"
         
-        if self.sentiment:
-            fields.append({
-                "name": "📊 Sentiment",
-                "value": f"{self.sentiment.upper()} ({self.sentiment_confidence:.0%})" if self.sentiment_confidence else self.sentiment.upper(),
+        time_str = ""
+        if self.published_at:
+            try:
+                from datetime import datetime
+                dt = datetime.fromisoformat(self.published_at.replace('Z', '+00:00'))
+                time_str = dt.strftime("%H:%M WIB")
+            except:
+                time_str = "N/A"
+        
+        description_parts = [
+            f"**{category}**",
+            self.title_id or self.title,  # Use Indonesian title if available
+            "",
+            self.summary[:300] if self.summary else "",
+        ]
+        description = "\n".join(description_parts)
+        
+        fields = [
+            {
+                "name": "Waktu",
+                "value": time_str or "N/A",
                 "inline": True,
-            })
-        
-        if self.impact_level:
-            fields.append({
-                "name": "💥 Impact",
-                "value": f"{impact_emoji.get(self.impact_level, '')} {self.impact_level.upper()}",
+            },
+            {
+                "name": "Impact",
+                "value": impact_bar,
                 "inline": True,
-            })
-        
-        if self.currency_pairs:
-            fields.append({
-                "name": "💱 Pairs",
-                "value": ", ".join(self.currency_pairs[:5]),
-                "inline": True,
-            })
-        
-        if self.summary:
-            fields.append({
-                "name": "📝 Summary",
-                "value": self.summary[:500] + "..." if len(self.summary) > 500 else self.summary,
+            },
+            {
+                "name": "Sumber",
+                "value": f"[Baca Selengkapnya]({self.original_url})",
                 "inline": False,
-            })
+            },
+        ]
+        
+        footer_date = ""
+        if self.published_at:
+            try:
+                from datetime import datetime
+                dt = datetime.fromisoformat(self.published_at.replace('Z', '+00:00'))
+                footer_date = dt.strftime("%d/%m/%Y %H:%M")
+            except:
+                footer_date = ""
+        
+        # Use Indonesian title if available
+        display_title = self.title_id or self.title
         
         return {
-            "title": self.title_id or self.title,
-            "description": f"Source: {self.source_name}",
-            "url": self.original_url,
+            "title": display_title,
+            "description": description,
             "color": color,
             "fields": fields,
-            "thumbnail": {"url": self.image_url} if self.image_url else None,
-            "timestamp": self.published_at or self.processed_at,
             "footer": {
-                "text": f"News Intelligence API • {self.impact_level or 'N/A'} Impact",
+                "text": f"Forex Alert • {self.source_name} • {footer_date}",
             },
         }
 
@@ -151,7 +168,7 @@ async def broadcast_high_impact_alert(article_data: dict) -> int:
     )
     
     discord_embed = event.to_discord_embed()
-    discord_embed["title"] = "🚨 HIGH IMPACT: " + discord_embed["title"]
+    discord_embed["title"] = "HIGH IMPACT: " + discord_embed["title"]
     
     count = await ws_manager.broadcast(
         event=EventType.NEWS_HIGH_IMPACT,
@@ -188,7 +205,7 @@ async def broadcast_sentiment_alert(
         "recent_articles": recent_articles[:5],
         "timestamp": datetime.utcnow().isoformat(),
         "discord_embed": {
-            "title": f"📊 Sentiment Alert: {currency_pair}",
+            "title": f"Sentiment Alert: {currency_pair}",
             "description": f"Market sentiment has shifted to **{sentiment.upper()}**",
             "color": 0x00FF00 if sentiment == "bullish" else 0xFF0000 if sentiment == "bearish" else 0x808080,
             "fields": [

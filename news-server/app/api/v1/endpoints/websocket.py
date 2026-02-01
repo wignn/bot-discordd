@@ -126,6 +126,26 @@ async def broadcast_message(
     return {"sent_to": count, "event": event, "channel": channel}
 
 
+@router.post("/ws/broadcast-article")
+async def broadcast_article(article_data: dict):
+    from app.websocket.events import broadcast_new_article, broadcast_high_impact_alert
+    
+    count = await broadcast_new_article(article_data)
+    
+    is_high_impact = article_data.get("impact_level") == "high" or (
+        article_data.get("impact_score") and article_data.get("impact_score") >= 7
+    )
+    
+    if is_high_impact:
+        await broadcast_high_impact_alert(article_data)
+    
+    return {
+        "status": "broadcasted",
+        "clients_notified": count,
+        "high_impact": is_high_impact,
+    }
+
+
 @router.post("/ws/test-news")
 async def test_news_broadcast():
     from app.websocket.events import broadcast_new_article
