@@ -1,0 +1,92 @@
+[project]
+name = "news-intelligence-api"
+version = "1.0.0"
+description = "Scalable News Intelligence Platform with AI Analysis for Forex Trading"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "News Intelligence Team"}
+]
+keywords = ["news", "forex", "ai", "api", "trading", "analysis"]
+
+dependencies = [
+    # Web Framework
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "python-multipart>=0.0.6",
+    
+    # Database
+    "sqlalchemy>=2.0.25",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.1",
+    
+    # Redis & Cache
+    "redis>=5.0.1",
+    "aioredis>=2.0.1",
+    
+    # Task Queue
+    "celery>=5.3.6",
+    "flower>=2.0.1",
+    
+    # HTTP & Scraping
+    "httpx>=0.26.0",
+    "aiohttp>=3.9.1",
+    "beautifulsoup4>=4.12.3",
+    "lxml>=5.1.0",
+    "newspaper3k>=0.2.8",
+    "feedparser>=6.0.10",
+    "playwright>=1.41.0",
+    
+    # AI Providers
+    "groq>=0.4.2",
+    "google-generativeai>=0.3.2",
+    "openai>=1.10.0",  # For OpenRouter compatibility
+    
+    # Data Processing
+    "pydantic>=2.5.3",
+    "pydantic-settings>=2.1.0",
+    "python-dateutil>=2.8.2",
+    "pytz>=2024.1",
+    
+    # Search
+    "elasticsearch>=8.12.0",
+    
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "tenacity>=8.2.3",
+    "structlog>=24.1.0",
+    "orjson>=3.9.12",
+    "xxhash>=3.4.1",
+    
+    # Monitoring
+    "prometheus-client>=0.19.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.4",
+    "pytest-asyncio>=0.23.3",
+    "pytest-cov>=4.1.0",
+    "black>=24.1.1",
+    "ruff>=0.1.14",
+    "mypy>=1.8.0",
+    "pre-commit>=3.6.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

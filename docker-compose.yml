@@ -1,0 +1,222 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: forex-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=forex
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./wr-bot/init-db:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - forex-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d forex" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: forex-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - forex-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: forex-rabbitmq
+    restart: unless-stopped
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - forex-network
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "check_running" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  news-api:
+    build:
+      context: ./news-server
+      dockerfile: ../infrastructure/docker/Dockerfile.api
+    container_name: news-api
+    image: wign/news-api:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/forex
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    env_file:
+      - ./news-server/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./news-server/app:/app/app
+      - ./news-server/workers:/app/workers
+    networks:
+      - forex-network
+
+  news-worker:
+    build:
+      context: ./news-server
+      dockerfile: ../infrastructure/docker/Dockerfile.worker
+    container_name: news-worker
+    image: wign/news-worker:latest
+    restart: unless-stopped
+    command: celery -A workers.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/forex
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    env_file:
+      - ./news-server/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./news-server/app:/app/app
+      - ./news-server/workers:/app/workers
+    networks:
+      - forex-network
+
+  news-beat:
+    build:
+      context: ./news-server
+      dockerfile: ../infrastructure/docker/Dockerfile.worker
+    container_name: news-beat
+    restart: unless-stopped
+    command: celery -A workers.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/forex
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    env_file:
+      - ./news-server/.env
+    depends_on:
+      - news-worker
+    networks:
+      - forex-network
+
+  flower:
+    build:
+      context: ./news-server
+      dockerfile: ../infrastructure/docker/Dockerfile.worker
+    container_name: news-flower
+    restart: unless-stopped
+    command: celery -A workers.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+    depends_on:
+      - rabbitmq
+      - news-worker
+    networks:
+      - forex-network
+
+  discord-bot:
+    build:
+      context: ./wr-bot
+      dockerfile: ../infrastructure/docker/Dockerfile.bot
+    container_name: discord-bot
+    image: wign/discord-bot:latest
+    restart: unless-stopped
+    volumes:
+      - bot_data:/app/data
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/forex
+      - NEWS_WS_URL=ws://news-api:8000
+    env_file:
+      - ./wr-bot/.env
+    tty: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      lavalink:
+        condition: service_started
+      news-api:
+        condition: service_started
+    networks:
+      - forex-network
+
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4
+    container_name: lavalink
+    restart: unless-stopped
+    user: "0:0"
+    volumes:
+      - ./wr-bot/lavalink/application.yml:/opt/Lavalink/application.yml
+      - ./wr-bot/lavalink/plugins:/opt/Lavalink/plugins
+    env_file:
+      - ./wr-bot/.env
+    environment:
+      - _JAVA_OPTIONS=-Xmx512M -Djava.net.preferIPv4Stack=true
+      - SERVER_PORT=2333
+    ports:
+      - "2333:2333"
+    networks:
+      - forex-network
+    healthcheck:
+      test: [ "CMD", "curl", "-sf", "-H", "Authorization: youshallnotpass", "http://localhost:2333/version" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  pgweb:
+    image: sosedoff/pgweb:latest
+    container_name: forex-pgweb
+    restart: unless-stopped
+    environment:
+      - PGWEB_DATABASE_URL=postgres://postgres:postgres@postgres:5432/forex?sslmode=disable
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - forex-network
+    profiles:
+      - admin
+
+networks:
+  forex-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  bot_data:
