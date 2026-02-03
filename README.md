@@ -202,7 +202,7 @@ forex/
 
 - Multi-source RSS feed collection (InvestingLive, FXStreet, Investing.com, etc)
 - Web scraping with Playwright for JavaScript-rendered content
-- Direct broadcast to Discord (no AI processing to save costs)
+- Direct broadcast to Discord
 - Translation endpoint available for manual use
 
 ### Discord Bot
