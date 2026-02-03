@@ -168,7 +168,7 @@ class WebSocketManager:
         if sent_count > 0:
             logger.debug(
                 "Broadcast sent",
-                event=event,
+                event_type=str(event),
                 sent_count=sent_count,
                 channel=channel,
             )
