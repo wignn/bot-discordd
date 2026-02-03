@@ -90,7 +90,7 @@ services:
     container_name: news-worker
     image: wign/news-worker:latest
     restart: unless-stopped
-    command: celery -A workers.celery_app worker --loglevel=info --concurrency=4
+    command: celery -A workers.celery_app worker --loglevel=info --concurrency=1
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/forex
       - REDIS_URL=redis://redis:6379/0

@@ -7,7 +7,7 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=30)
+@shared_task(bind=True, max_retries=5, default_retry_delay=60)
 def process_article_ai(self, article_data: dict):
     from workers.ai.processor import NewsProcessor
     from workers.ai.providers.factory import get_ai_provider

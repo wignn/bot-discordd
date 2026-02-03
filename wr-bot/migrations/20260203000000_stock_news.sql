@@ -34,7 +34,7 @@ CREATE INDEX IF NOT EXISTS idx_stock_news_is_processed ON stock_news(is_processe
 CREATE TABLE IF NOT EXISTS stock_news_channels (
     id SERIAL PRIMARY KEY,
     guild_id BIGINT NOT NULL,
-    channel_id BIGINT NOT NULL,
+    channel_id BIGINT NOT NULL UNIQUE,
     
     -- Filters
     tickers_filter TEXT,  -- Comma-separated tickers to filter, NULL = all
@@ -44,8 +44,7 @@ CREATE TABLE IF NOT EXISTS stock_news_channels (
     
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    UNIQUE(guild_id, channel_id)
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_stock_channels_guild ON stock_news_channels(guild_id);
