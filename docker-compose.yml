@@ -47,8 +47,6 @@ services:
       - "15672:15672"
     networks:
       - forex-network
-    environment:
-      - RABBITMQ_VM_MEMORY_HIGH_WATERMARK=0.7
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "check_running" ]
       interval: 10s
