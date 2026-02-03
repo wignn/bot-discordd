@@ -7,12 +7,6 @@ from workers.ai.providers.base import AIProvider, AIResponse, AIMessage
 
 
 class GeminiProvider(AIProvider):
-    """
-    Gemini AI Provider with lazy initialization.
-    
-    The gRPC client is initialized lazily to avoid issues with Celery's
-    fork-based multiprocessing. gRPC connections don't survive fork().
-    """
 
     def __init__(self, api_key: str, model: str = "gemini-1.5-flash"):
         super().__init__(api_key, model)
@@ -21,12 +15,15 @@ class GeminiProvider(AIProvider):
         self._configured = False
     
     def _ensure_client(self):
-        """Lazy initialization of the Gemini client."""
         if self._client is None or not self._configured:
             genai.configure(api_key=self._api_key)
             self._client = genai.GenerativeModel(self.model)
             self._configured = True
         return self._client
+    
+    def _reset_client(self):
+        self._client = None
+        self._configured = False
 
     @property
     def provider_name(self) -> str:
@@ -52,10 +49,18 @@ class GeminiProvider(AIProvider):
         )
 
         client = self._ensure_client()
-        response = await client.generate_content_async(
-            full_prompt,
-            generation_config=generation_config,
-        )
+        try:
+            response = client.generate_content(
+                full_prompt,
+                generation_config=generation_config,
+            )
+        except Exception as e:
+            self._reset_client()
+            client = self._ensure_client()
+            response = client.generate_content(
+                full_prompt,
+                generation_config=generation_config,
+            )
 
         latency_ms = (time.perf_counter() - start_time) * 1000
 
@@ -95,14 +100,29 @@ class GeminiProvider(AIProvider):
                 break
 
         last_response = None
-        for msg in messages:
-            if msg.role == "system":
-                continue
-            elif msg.role == "user":
-                content = msg.content
-                if system_content and msg == messages[-1]:
-                    content = f"{system_content}\n\n{content}"
-                last_response = await chat.send_message_async(content)
+        try:
+            for msg in messages:
+                if msg.role == "system":
+                    continue
+                elif msg.role == "user":
+                    content = msg.content
+                    if system_content and msg == messages[-1]:
+                        content = f"{system_content}\n\n{content}"
+                    # Use synchronous method to avoid gRPC async event loop issues
+                    last_response = chat.send_message(content)
+        except Exception as e:
+            # Reset client and retry once on connection errors
+            self._reset_client()
+            client = self._ensure_client()
+            chat = client.start_chat(history=[])
+            for msg in messages:
+                if msg.role == "system":
+                    continue
+                elif msg.role == "user":
+                    content = msg.content
+                    if system_content and msg == messages[-1]:
+                        content = f"{system_content}\n\n{content}"
+                    last_response = chat.send_message(content)
 
         latency_ms = (time.perf_counter() - start_time) * 1000
 

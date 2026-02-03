@@ -55,7 +55,7 @@ impl StockNewsWsClient {
     }
 
     pub async fn connect_and_listen(&self) -> Result<(), BotError> {
-        let url = format!("{}/stock/ws", self.ws_url.trim_end_matches('/'));
+        let url = format!("{}/api/v1/stock/ws", self.ws_url.trim_end_matches('/'));
         
         loop {
             println!("[STOCK-WS] Connecting to {}", url);
