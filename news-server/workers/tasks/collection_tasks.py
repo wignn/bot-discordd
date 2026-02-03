@@ -61,7 +61,7 @@ def process_rss_entry(self, entry_data: dict, feed_url: str, source_id: str = No
     from sqlalchemy import text
     from app.db.session import get_sync_db
     from workers.tasks.scraping_tasks import scrape_article
-    from workers.tasks.ai_tasks import process_article_ai
+    from workers.tasks.broadcast_tasks import broadcast_article  # Direct broadcast, no AI
     
     # Generate content hash for deduplication
     url = entry_data.get("link", "")
@@ -90,17 +90,28 @@ def process_rss_entry(self, entry_data: dict, feed_url: str, source_id: str = No
     content = entry_data.get("content", "")
     description = entry_data.get("summary", "") or entry_data.get("description", "")
     
-    if len(content) < 500:
+    if len(content) < 200:
         scrape_article.delay(url, entry_data)
     else:
-        process_article_ai.delay({
+        # Get source name from feed URL
+        from workers.collectors.rss_collector import DEFAULT_FOREX_FEEDS
+        source_name = "Unknown"
+        for feed in DEFAULT_FOREX_FEEDS:
+            if feed.get("rss_url") == feed_url:
+                source_name = feed.get("name", "Unknown")
+                break
+        
+        # Direct broadcast without AI processing (cost saving)
+        broadcast_article.delay({
             "title": title,
             "content": content,
-            "description": description,  # RSS description field
+            "description": description,
             "url": url,
             "content_hash": content_hash,
             "published_at": entry_data.get("published_at"),
             "source_id": source_id,
+            "source_name": source_name,
+            "source_url": feed_url,
         })
     
     return {"status": "processed", "url": url}

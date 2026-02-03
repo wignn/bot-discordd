@@ -10,7 +10,7 @@ logger = get_logger(__name__)
 def scrape_article(self, url: str, rss_data: dict = None):
     import asyncio
     from workers.scrapers.generic_scraper import GenericScraper
-    from workers.tasks.ai_tasks import process_article_ai
+    from workers.tasks.broadcast_tasks import broadcast_article  # Direct broadcast, no AI
     
     async def _scrape():
         scraper = GenericScraper()
@@ -27,15 +27,22 @@ def scrape_article(self, url: str, rss_data: dict = None):
             if rss_data:
                 title = rss_data.get("title") or title
             
-            process_article_ai.delay({
+            # Get source info from RSS data
+            source_name = rss_data.get("source_name", "Unknown") if rss_data else "Unknown"
+            description = rss_data.get("summary", "") or rss_data.get("description", "") if rss_data else ""
+            
+            # Direct broadcast without AI processing (cost saving)
+            broadcast_article.delay({
                 "title": title,
                 "content": content,
+                "description": description,
                 "url": url,
                 "author": article.author,
                 "published_at": str(article.published_at) if article.published_at else None,
                 "image_url": article.image_url,
                 "tags": article.tags,
                 "content_hash": article.content_hash,
+                "source_name": source_name,
             })
             
             logger.info(
@@ -65,18 +72,21 @@ def scrape_batch(self, urls: list[str]):
         try:
             articles = await scraper.scrape_batch(urls, delay=2.0)
             
-            from workers.tasks.ai_tasks import process_article_ai
+            from workers.tasks.broadcast_tasks import broadcast_article
             
             for article in articles:
-                process_article_ai.delay({
+                # Direct broadcast without AI processing (cost saving)
+                broadcast_article.delay({
                     "title": article.title,
                     "content": article.content,
+                    "description": "",
                     "url": article.url,
                     "author": article.author,
                     "published_at": str(article.published_at) if article.published_at else None,
                     "image_url": article.image_url,
                     "tags": article.tags,
                     "content_hash": article.content_hash,
+                    "source_name": "Unknown",
                 })
             
             return {

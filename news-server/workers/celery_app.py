@@ -16,7 +16,7 @@ celery_app = Celery(
     include=[
         "workers.tasks.collection_tasks",
         "workers.tasks.scraping_tasks",
-        "workers.tasks.ai_tasks",
+        "workers.tasks.broadcast_tasks",
         "workers.tasks.maintenance_tasks",
         "workers.tasks.websocket_tasks",
         "workers.tasks.stock_tasks",
@@ -39,12 +39,6 @@ celery_app.conf.update(
     
     worker_prefetch_multiplier=1,
     worker_concurrency=4,
-    
-    task_annotations={
-        "workers.tasks.ai_tasks.*": {
-            "rate_limit": "30/m",
-        },
-    },
 )
 
 celery_app.conf.beat_schedule = {
@@ -55,11 +49,11 @@ celery_app.conf.beat_schedule = {
     
     "fetch-stock-id-feeds": {
         "task": "workers.tasks.stock_tasks.fetch_stock_id_feeds",
-        "schedule": crontab(minute="*/3"),  # Every 3 minutes for stock news
+        "schedule": crontab(minute="*/3"),
     },
     
     "process-pending-articles": {
-        "task": "workers.tasks.ai_tasks.process_pending_articles",
+        "task": "workers.tasks.broadcast_tasks.process_pending_articles",
         "schedule": crontab(minute="*/2"),
     },
     
@@ -87,13 +81,7 @@ celery_app.conf.beat_schedule = {
 
 @worker_process_init.connect
 def init_worker_process(**kwargs):
-    try:
-        from workers.ai.providers.factory import AIProviderFactory
-        AIProviderFactory.clear_cache()
-    except Exception:
-        pass
-    
-    # Re-configure Gemini after fork
+    # Re-configure Gemini after fork (for translate endpoint)
     try:
         import google.generativeai as genai
         from app.core.config import settings

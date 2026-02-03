@@ -160,6 +160,7 @@ services:
       - RUST_LOG=info
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/forex
       - NEWS_WS_URL=ws://news-api:8000
+      - FOREX_SERVICE_URL=http://news-api:8000
     env_file:
       - ./wr-bot/.env
     tty: true
