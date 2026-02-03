@@ -1,6 +1,7 @@
 use crate::commands::Data;
 use crate::services::{get_forex_api, get_forex_ws};
 use poise::serenity_prelude::{CreateAttachment, CreateEmbed};
+use serenity::all::CreateEmbedFooter;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
