@@ -60,12 +60,12 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS - allow frontend in production
     allowed_origins = ["*"] if settings.is_development else [
         "http://localhost:5173",
         "http://localhost:3000",
+        "https://forex.wign.cloud",
+        "https://api.wign.cloud",
     ]
-    # Add custom origins from environment if set
     if hasattr(settings, 'cors_origins') and settings.cors_origins:
         allowed_origins.extend(settings.cors_origins.split(','))
     
@@ -79,7 +79,6 @@ def create_app() -> FastAPI:
 
     app.include_router(api_router, prefix="/api/v1")
     
-    # Include Stock News router
     from app.stock.router import router as stock_router
     app.include_router(stock_router, prefix="/api/v1")
 
@@ -100,7 +99,6 @@ def create_app() -> FastAPI:
             "health": "/health",
         }
 
-    # Forex WebSocket endpoint
     @app.websocket("/ws/forex")
     async def forex_websocket(websocket: WebSocket, client_id: str = "unknown", client_type: str = "unknown"):
         from app.forex.websocket import get_forex_ws_manager

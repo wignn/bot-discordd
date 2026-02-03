@@ -5,13 +5,12 @@ tunnel: 6f40336a-d190-42d5-8e2a-806b80cb01ed
 credentials-file: /home/ubuntu/.cloudflared/6f40336a-d190-42d5-8e2a-806b80cb01ed.json
 
 ingress:
-  # Frontend
   - hostname: forex.wign.cloud
     service: http://localhost:3000
   
-  # API
   - hostname: api.wign.cloud
     service: http://localhost:8000
+    originRequest:
+      noTLSVerify: true
   
-  # Catch-all
   - service: http_status:404
