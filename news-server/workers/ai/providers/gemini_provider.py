@@ -8,7 +8,7 @@ from workers.ai.providers.base import AIProvider, AIResponse, AIMessage
 
 class GeminiProvider(AIProvider):
 
-    def __init__(self, api_key: str, model: str = "gemini-1.5-flash"):
+    def __init__(self, api_key: str, model: str = "gemini-2.0-flash"):
         super().__init__(api_key, model)
         self._api_key = api_key
         self._client = None
