@@ -21,7 +21,7 @@ use worm::services::tiingo::TiingoService;
 async fn main() -> Result<(), BotError> {
     dotenv().ok();
 
-    println!("Starting WR Bot...");
+    println!("Starting Bot...");
 
     let config = Config::from_env()
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
@@ -40,7 +40,6 @@ async fn main() -> Result<(), BotError> {
     let mut owners = HashSet::new();
     owners.insert(UserId::new(owner_id));
 
-    // Get database URL from environment
     let database_url = env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/wrbot".to_string());
 

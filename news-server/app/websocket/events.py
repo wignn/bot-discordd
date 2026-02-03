@@ -15,6 +15,7 @@ class NewsEvent:
     title: str
     title_id: str | None
     summary: str | None
+    summary_id: str | None  
     source_name: str
     source_url: str
     original_url: str
@@ -60,11 +61,13 @@ class NewsEvent:
             except:
                 time_str = "N/A"
         
+        # Use Indonesian summary if available, otherwise fall back to English
+        display_summary = self.summary_id or self.summary
         description_parts = [
             f"**{category}**",
             self.title_id or self.title,  # Use Indonesian title if available
             "",
-            self.summary[:300] if self.summary else "",
+            display_summary[:300] if display_summary else "",
         ]
         description = "\n".join(description_parts)
         
@@ -115,6 +118,7 @@ async def broadcast_new_article(article_data: dict) -> int:
         title=article_data.get("original_title", ""),
         title_id=article_data.get("translated_title"),
         summary=article_data.get("summary"),
+        summary_id=article_data.get("summary_id"),  # Indonesian summary
         source_name=article_data.get("source_name", "Unknown"),
         source_url=article_data.get("source_url", ""),
         original_url=article_data.get("url", ""),
@@ -153,6 +157,7 @@ async def broadcast_high_impact_alert(article_data: dict) -> int:
         title=article_data.get("original_title", ""),
         title_id=article_data.get("translated_title"),
         summary=article_data.get("summary"),
+        summary_id=article_data.get("summary_id"),  # Indonesian summary
         source_name=article_data.get("source_name", "Unknown"),
         source_url=article_data.get("source_url", ""),
         original_url=article_data.get("url", ""),

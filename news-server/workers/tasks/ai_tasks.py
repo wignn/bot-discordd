@@ -34,8 +34,8 @@ def process_article_ai(self, article_data: dict):
                 "id": article_data.get("content_hash", ""),
                 "original_title": result.original_title or article_data.get("title", ""),
                 "translated_title": result.translated_title,
-                # Use AI summary if available, otherwise use original content/description
-                "summary": result.summary or article_data.get("description", "") or article_data.get("content", "")[:500],
+                "summary": article_data.get("description", "") or article_data.get("content", "")[:500],
+                "summary_id": result.summary,
                 "source_name": article_data.get("source_name", "Unknown"),
                 "source_url": article_data.get("source_url", ""),
                 "url": article_data.get("url", ""),
@@ -73,7 +73,6 @@ def process_article_ai(self, article_data: dict):
             except Exception as db_error:
                 logger.warning("Failed to save article to DB", error=str(db_error))
             
-            # Broadcast via HTTP to news-api (which has WebSocket clients connected)
             try:
                 import httpx
                 

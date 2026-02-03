@@ -32,6 +32,7 @@ pub struct ArticleData {
     pub title: String,
     pub title_id: Option<String>,
     pub summary: Option<String>,
+    pub summary_id: Option<String>,  // Indonesian summary
     pub source_name: String,
     pub original_url: String,
     pub sentiment: Option<String>,
