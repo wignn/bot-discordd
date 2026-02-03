@@ -42,7 +42,6 @@ async fn send_ai_response(ctx: Context<'_>, content: String) -> Result<(), Error
     Ok(())
 }
 
-/// Chat dengan AI WormGPT
 #[poise::command(prefix_command, slash_command, aliases("worm", "wr"))]
 pub async fn worm(
     ctx: Context<'_>,
@@ -53,11 +52,10 @@ pub async fn worm(
     let config = Config::from_env()
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
-    // Check if AI is enabled
     let api_key = match &config.api_key {
         Some(key) => key.clone(),
         None => {
-            ctx.say("❌ Fitur AI belum dikonfigurasi. Harap set `API_KEY` di environment.")
+            ctx.say("Fitur AI belum dikonfigurasi. Harap set `API_KEY` di environment.")
                 .await?;
             return Ok(());
         }
@@ -65,11 +63,11 @@ pub async fn worm(
 
     let mut ai = Ai::new(config.base_url, api_key, config.model_ai, config.prompt);
 
-    let loading_msg = ctx.say("⏳ Memproses...").await?;
+    let loading_msg = ctx.say("Memproses...").await?;
 
     let response = ai.call_api(text).await.map_err(|e| e.to_string());
 
-    let content = response.unwrap_or_else(|e| format!("❌ Error: {}", e));
+    let content = response.unwrap_or_else(|e| format!("Error: {}", e));
 
     const DISCORD_MAX_LEN: usize = 2000;
     const CHUNK_MAX: usize = 1900;
@@ -83,7 +81,7 @@ pub async fn worm(
             .edit(
                 ctx,
                 CreateReply::default()
-                    .content("📜 Response terlalu panjang, mengirim dalam beberapa pesan..."),
+                    .content("Response terlalu panjang, mengirim dalam beberapa pesan..."),
             )
             .await?;
         let chunks = split_into_chunks(&content, CHUNK_MAX);
@@ -126,7 +124,7 @@ pub async fn gemini(
             send_ai_response(ctx, response).await?;
         }
         Err(e) => {
-            ctx.say(format!("❌ Error: {}", e)).await?;
+            ctx.say(format!("Error: {}", e)).await?;
         }
     }
 
@@ -145,7 +143,7 @@ pub async fn gemini_chat(
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
     if config.gemini_api_key == "api_key" {
-        ctx.say("❌ Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
+        ctx.say("Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
             .await?;
         return Ok(());
     }
@@ -165,7 +163,7 @@ pub async fn gemini_chat(
             send_ai_response(ctx, response).await?;
         }
         Err(e) => {
-            ctx.say(format!("❌ Error: {}", e)).await?;
+            ctx.say(format!("Error: {}", e)).await?;
         }
     }
 
@@ -179,7 +177,7 @@ pub async fn gemini_clear(ctx: Context<'_>) -> Result<(), Error> {
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
     if config.gemini_api_key == "api_key" {
-        ctx.say("❌ Fitur Gemini AI belum dikonfigurasi.").await?;
+        ctx.say("Fitur Gemini AI belum dikonfigurasi.").await?;
         return Ok(());
     }
 
@@ -192,7 +190,7 @@ pub async fn gemini_clear(ctx: Context<'_>) -> Result<(), Error> {
     let user_id = ctx.author().id.to_string();
     gemini.clear_history(&user_id).await;
 
-    ctx.say("✅ History chat kamu telah dihapus!").await?;
+    ctx.say("History chat kamu telah dihapus!").await?;
     Ok(())
 }
 
@@ -210,7 +208,7 @@ pub async fn gemini_vision(
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
     if config.gemini_api_key == "api_key" {
-        ctx.say("❌ Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
+        ctx.say("Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
             .await?;
         return Ok(());
     }
@@ -226,7 +224,7 @@ pub async fn gemini_vision(
     match gemini.analyze_image(&image_url, prompt.as_deref()).await {
         Ok(response) => {
             let embed = CreateEmbed::default()
-                .title("🖼️ Analisis Gambar")
+                .title("Analisis Gambar")
                 .thumbnail(&image_url)
                 .description(&response)
                 .color(0x4285F4)
@@ -262,7 +260,7 @@ pub async fn analisa(
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
     if config.gemini_api_key == "api_key" {
-        ctx.say("❌ Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
+        ctx.say("Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
             .await?;
         return Ok(());
     }
@@ -298,7 +296,7 @@ pub async fn analisa(
     let image_url = match image_url {
         Some(url) => url,
         None => {
-            ctx.say("❌ Tidak ada gambar ditemukan!\n\n**Cara pakai:**\n• Attach gambar + `!analisa [symbol] [timeframe]`\n• Reply ke pesan dengan gambar + `!analisa [symbol] [timeframe]`").await?;
+            ctx.say("Tidak ada gambar ditemukan!\n\n**Cara pakai:**\n• Attach gambar + `!analisa [symbol] [timeframe]`\n• Reply ke pesan dengan gambar + `!analisa [symbol] [timeframe]`").await?;
             return Ok(());
         }
     };
@@ -309,7 +307,7 @@ pub async fn analisa(
         config.gemini_prompt,
     );
 
-    let loading_msg = ctx.say("📊 Menganalisis chart... Mohon tunggu sebentar.").await?;
+    let loading_msg = ctx.say("Menganalisis chart... Mohon tunggu sebentar.").await?;
 
     match gemini.analyze_market_image(
         &image_url, 
@@ -321,7 +319,7 @@ pub async fn analisa(
             loading_msg.delete(ctx).await.ok();
             
             let title = format!(
-                "📊 Market Analysis{}{}",
+                "Market Analysis{}{}",
                 symbol.as_ref().map(|s| format!(" - {}", s)).unwrap_or_default(),
                 timeframe.as_ref().map(|t| format!(" ({})", t)).unwrap_or_default()
             );
@@ -335,14 +333,14 @@ pub async fn analisa(
                     .thumbnail(&image_url)
                     .description(&response)
                     .color(0x00C853)
-                    .footer(CreateEmbedFooter::new("⚠️ Bukan financial advice - DYOR"));
+                    .footer(CreateEmbedFooter::new("Bukan financial advice - DYOR"));
 
                 ctx.send(CreateReply::default().embed(embed)).await?;
             }
         }
         Err(e) => {
             loading_msg.delete(ctx).await.ok();
-            ctx.say(format!("❌ Error menganalisis chart: {}", e)).await?;
+            ctx.say(format!("Error menganalisis chart: {}", e)).await?;
         }
     }
 

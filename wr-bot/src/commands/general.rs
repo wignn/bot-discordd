@@ -80,7 +80,7 @@ pub async fn purge(
             poise::CreateReply::default().embed(
                 serenity::CreateEmbed::default()
                     .title("Berhasil")
-                    .description(format!("✅ Berhasil menghapus {} pesan.", total_count))
+                    .description(format!("Berhasil menghapus {} pesan.", total_count))
                     .color(0x57F287),
             ),
         )

@@ -52,7 +52,7 @@ pub async fn price(
             };
 
             let embed = CreateEmbed::new()
-                .title(format!("💱 {}", symbol.to_uppercase()))
+                .title(format!("{}", symbol.to_uppercase()))
                 .field("Bid", format!("{:.5}", price.bid), true)
                 .field("Ask", format!("{:.5}", price.ask), true)
                 .field("Spread", format!("{:.1} pips", spread_pips), true)

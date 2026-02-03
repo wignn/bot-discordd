@@ -246,14 +246,13 @@ impl NewsWebSocketService {
         let is_high_impact = event.event == "news.high_impact";
         let mention_everyone = data.mention_everyone.unwrap_or(false);
 
-        // Send to all channels
         for channel in &channels {
             let channel_id = ChannelId::new(channel.channel_id as u64);
 
             let mut message = CreateMessage::new().embed(embed.clone());
 
             if is_high_impact && mention_everyone {
-                message = message.content("@everyone 🚨 **HIGH IMPACT NEWS**");
+                message = message.content("@everyone **HIGH IMPACT NEWS**");
             }
 
             if let Err(e) = channel_id.send_message(&self.http, message).await {

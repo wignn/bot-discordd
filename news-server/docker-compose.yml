@@ -31,12 +31,14 @@ services:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.worker
     container_name: news-worker
-    command: celery -A workers.celery_app worker --loglevel=info --concurrency=4
+    command: celery -A workers.celery_app worker --pool=solo --loglevel=info
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/news_db
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
       - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - GRPC_ENABLE_FORK_SUPPORT=0
+      - GRPC_POLL_STRATEGY=epoll1
     env_file:
       - .env
     depends_on:

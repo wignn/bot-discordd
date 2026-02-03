@@ -115,39 +115,39 @@ class NewsProcessor:
             source_url=source_url,
         )
 
-        tasks = []
-        
         if translate:
-            tasks.append(("translate_title", self.translator.translate_title(title)))
-            tasks.append(("translate_content", self.translator.translate(content)))
+            translate_tasks = [
+                ("translate_title", self.translator.translate_title(title)),
+                ("translate_content", self.translator.translate(content)),
+            ]
+            task_names = [t[0] for t in translate_tasks]
+            task_coros = [t[1] for t in translate_tasks]
+            responses = await asyncio.gather(*task_coros, return_exceptions=True)
+
+            for name, response in zip(task_names, responses):
+                if isinstance(response, Exception):
+                    continue
+                total_tokens += response.tokens_used
+                if name == "translate_title":
+                    result.translated_title = response.content
+                elif name == "translate_content":
+                    result.translated_content = response.content
+
+        content_for_summary = result.translated_content if result.translated_content else content
         
-        tasks.append(("summarize", self.summarizer.summarize(content, style="bullet")))
-
-        task_names = [t[0] for t in tasks]
-        task_coros = [t[1] for t in tasks]
-        responses = await asyncio.gather(*task_coros, return_exceptions=True)
-
-        for name, response in zip(task_names, responses):
-            if isinstance(response, Exception):
-                continue
-            
-            total_tokens += response.tokens_used
-            
-            if name == "translate_title":
-                result.translated_title = response.content
-            elif name == "translate_content":
-                result.translated_content = response.content
-            elif name == "summarize":
-                result.summary = response.content
-                try:
-                    lines = response.content.strip().split("\n")
-                    result.summary_bullets = [
-                        l.strip().lstrip("•-*123456789. ")
-                        for l in lines
-                        if l.strip()
-                    ]
-                except Exception:
-                    pass
+        summary_response = await self.summarizer.summarize(content_for_summary, style="bullet")
+        if not isinstance(summary_response, Exception):
+            total_tokens += summary_response.tokens_used
+            result.summary = summary_response.content
+            try:
+                lines = summary_response.content.strip().split("\n")
+                result.summary_bullets = [
+                    l.strip().lstrip("•-*123456789. ")
+                    for l in lines
+                    if l.strip()
+                ]
+            except Exception:
+                pass
 
         analysis_tasks = []
         

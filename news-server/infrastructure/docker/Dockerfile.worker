@@ -19,5 +19,7 @@ RUN pip install playwright && playwright install chromium && playwright install-
 # Copy application code
 COPY . .
 
-# Default command (can be overridden)
-CMD ["celery", "-A", "workers.celery_app", "worker", "--loglevel=info"]
+# Default command - using solo pool to avoid gRPC fork issues
+# Alternative pools: threads, gevent, eventlet
+# prefork pool doesn't work well with gRPC async clients (google-generativeai)
+CMD ["celery", "-A", "workers.celery_app", "worker", "--pool=solo", "--loglevel=info"]

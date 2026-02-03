@@ -26,19 +26,20 @@ class NewsSummarizer:
             "forex_impact": "Fokus pada dampak untuk trading forex.",
         }
 
-        prompt = f"""Ringkas artikel berita forex/finansial berikut dalam Bahasa Indonesia.
+        prompt = f"""Kamu adalah analis berita forex yang ahli berbahasa Indonesia.
+PENTING: Semua output HARUS dalam Bahasa Indonesia, JANGAN gunakan Bahasa Inggris.
 
 {style_prompts[style]}
 
 Fokuskan pada:
 - Fakta utama
 - Dampak ke market
-- Currency yang terpengaruh
+- Currency yang terpengaruh (tulis nama currency dalam Bahasa Indonesia, misal: Dolar AS, Poundsterling, Yen Jepang)
 
 Artikel:
 {text}
 
-Ringkasan:"""
+Ringkasan (dalam Bahasa Indonesia):"""
 
         return await self.provider.generate(
             prompt=prompt,
@@ -47,16 +48,19 @@ Ringkasan:"""
         )
 
     async def summarize_for_trading(self, text: str) -> AIResponse:
-        prompt = """Analisis berita forex ini dan buat ringkasan untuk trader.
+        prompt = """Kamu adalah analis forex profesional yang berbahasa Indonesia.
+Analisis berita forex ini dan buat ringkasan untuk trader dalam Bahasa Indonesia.
+
+PENTING: Semua output HARUS dalam Bahasa Indonesia!
 
 Format output (JSON):
 {
-    "ringkasan": "2-3 kalimat ringkasan",
-    "poin_utama": ["poin 1", "poin 2", "poin 3"],
-    "dampak_market": "penjelasan singkat dampak",
+    "ringkasan": "2-3 kalimat ringkasan dalam Bahasa Indonesia",
+    "poin_utama": ["poin 1 dalam Bahasa Indonesia", "poin 2", "poin 3"],
+    "dampak_market": "penjelasan singkat dampak dalam Bahasa Indonesia",
     "pairs_terdampak": ["EUR/USD", "USD/JPY"],
     "sentimen": "bullish/bearish/netral",
-    "rekomendasi": "saran singkat untuk trader"
+    "rekomendasi": "saran singkat untuk trader dalam Bahasa Indonesia"
 }
 
 Artikel:

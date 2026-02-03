@@ -7,11 +7,26 @@ from workers.ai.providers.base import AIProvider, AIResponse, AIMessage
 
 
 class GeminiProvider(AIProvider):
+    """
+    Gemini AI Provider with lazy initialization.
+    
+    The gRPC client is initialized lazily to avoid issues with Celery's
+    fork-based multiprocessing. gRPC connections don't survive fork().
+    """
 
     def __init__(self, api_key: str, model: str = "gemini-1.5-flash"):
         super().__init__(api_key, model)
-        genai.configure(api_key=api_key)
-        self._client = genai.GenerativeModel(model)
+        self._api_key = api_key
+        self._client = None
+        self._configured = False
+    
+    def _ensure_client(self):
+        """Lazy initialization of the Gemini client."""
+        if self._client is None or not self._configured:
+            genai.configure(api_key=self._api_key)
+            self._client = genai.GenerativeModel(self.model)
+            self._configured = True
+        return self._client
 
     @property
     def provider_name(self) -> str:
@@ -36,7 +51,8 @@ class GeminiProvider(AIProvider):
             max_output_tokens=max_tokens,
         )
 
-        response = await self._client.generate_content_async(
+        client = self._ensure_client()
+        response = await client.generate_content_async(
             full_prompt,
             generation_config=generation_config,
         )
@@ -67,7 +83,8 @@ class GeminiProvider(AIProvider):
         max_tokens: int = 1024,
         **kwargs,
     ) -> AIResponse:
-        chat = self._client.start_chat(history=[])
+        client = self._ensure_client()
+        chat = client.start_chat(history=[])
         
         start_time = time.perf_counter()
 

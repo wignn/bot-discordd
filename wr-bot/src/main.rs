@@ -8,7 +8,7 @@ use songbird::SerenityInit;
 use std::collections::HashSet;
 use std::env;
 use std::sync::Arc;
-use worm::commands::{Data, admin, ai, forex, general, moderation, music, ping, price, sys};
+use worm::commands::{Data, admin, ai, chart, forex, general, moderation, music, ping, price, stock, sys};
 use worm::config::Config;
 use worm::error::BotError;
 use worm::handlers::{handle_event, handle_track_end, on_error};
@@ -135,6 +135,18 @@ async fn main() -> Result<(), BotError> {
                 price::alert(),
                 price::alerts(),
                 price::alertremove(),
+                // Chart commands (Python service)
+                chart::fprice(),
+                chart::chart(),
+                chart::compare(),
+                chart::analysis(),
+                chart::falert(),
+                chart::falerts(),
+                chart::falertremove(),
+                // Stock news commands
+                stock::stocknews(),
+                stock::search(),
+                stock::market(),
             ],
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("!".into()),
@@ -202,9 +214,21 @@ async fn main() -> Result<(), BotError> {
                     tokio::spawn(async move {
                         tiingo.start_price_polling(http_for_tiingo).await;
                     });
-                    println!("[OK] Tiingo price service initialized");
+                    println!("[OK] Tiingo price service initialized (direct connection)");
                 } else {
                     println!("[WARN] Tiingo not available (no TIINGO_API_KEY)");
+                }
+
+                if let Ok(forex_service_url) = env::var("FOREX_SERVICE_URL") {
+                    let http_for_forex = ctx.http.clone();
+                    worm::services::init_forex_clients(&forex_service_url, http_for_forex);
+                    
+                    tokio::spawn(async move {
+                        worm::services::start_forex_ws().await;
+                    });
+                    println!("[OK] Python Forex Service client initialized ({})", forex_service_url);
+                } else {
+                    println!("[WARN] Python Forex Service not configured (no FOREX_SERVICE_URL)");
                 }
 
                 Ok(Data {
@@ -260,13 +284,26 @@ async fn main() -> Result<(), BotError> {
 
     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
-    // Start News WebSocket service
     let news_ws_url = env::var("NEWS_WS_URL").unwrap_or_else(|_| "ws://news-api:8000".to_string());
     let bot_id = env::var("CLIENT_ID").unwrap_or_else(|_| "discord-bot".to_string());
     start_news_ws_service(db_for_checker, http.clone(), news_ws_url.clone(), bot_id);
     println!(
         "[OK] News WebSocket service started (connecting to {})",
         news_ws_url
+    );
+
+    let stock_ws_url = env::var("STOCK_WS_URL").unwrap_or_else(|_| news_ws_url.clone());
+    let http_for_stock = http.clone();
+    let db_for_stock = db.clone();
+    worm::services::init_stock_ws_client(&stock_ws_url, http_for_stock.clone(), db_for_stock);
+    tokio::spawn(async move {
+        if let Some(client) = worm::services::get_stock_ws_client_async().await {
+            let _ = client.connect_and_listen().await;
+        }
+    });
+    println!(
+        "[OK] Stock News WebSocket service started (connecting to {})",
+        stock_ws_url
     );
     let http_for_idle = http.clone();
     let songbird_for_idle = songbird.clone();

@@ -61,7 +61,7 @@ pub async fn warn(
         ModerationRepository::get_warning_count(pool, guild_id.get(), user.user.id.get()).await?;
 
     let embed = CreateEmbed::new()
-        .title("⚠️ User Warned")
+        .title("User Warned")
         .description(format!(
             "**User:** {}\n**Reason:** {}\n**Total Warnings:** {}",
             user.user.mention(),
@@ -121,7 +121,7 @@ pub async fn warnings(
         .join("\n\n");
 
     let embed = CreateEmbed::new()
-        .title(format!("⚠️ Warnings for {}", user.user.name))
+        .title(format!("Warnings for {}", user.user.name))
         .description(warnings_list)
         .color(Colour::ORANGE)
         .footer(CreateEmbedFooter::new(format!(

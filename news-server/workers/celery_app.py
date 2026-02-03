@@ -1,7 +1,12 @@
+import os
 from celery import Celery
 from celery.schedules import crontab
+from celery.signals import worker_process_init
 
 from app.core.config import settings
+
+os.environ.setdefault("GRPC_ENABLE_FORK_SUPPORT", "0")
+os.environ.setdefault("GRPC_POLL_STRATEGY", "epoll1")
 
 
 celery_app = Celery(
@@ -14,6 +19,7 @@ celery_app = Celery(
         "workers.tasks.ai_tasks",
         "workers.tasks.maintenance_tasks",
         "workers.tasks.websocket_tasks",
+        "workers.tasks.stock_tasks",
     ],
 )
 
@@ -47,6 +53,11 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(minute="*/5"),
     },
     
+    "fetch-stock-id-feeds": {
+        "task": "workers.tasks.stock_tasks.fetch_stock_id_feeds",
+        "schedule": crontab(minute="*/3"),  # Every 3 minutes for stock news
+    },
+    
     "process-pending-articles": {
         "task": "workers.tasks.ai_tasks.process_pending_articles",
         "schedule": crontab(minute="*/2"),
@@ -72,6 +83,24 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(minute=0),
     },
 }
+
+
+@worker_process_init.connect
+def init_worker_process(**kwargs):
+    try:
+        from workers.ai.providers.factory import AIProviderFactory
+        AIProviderFactory.clear_cache()
+    except Exception:
+        pass
+    
+    # Re-configure Gemini after fork
+    try:
+        import google.generativeai as genai
+        from app.core.config import settings
+        if settings.gemini_api_key:
+            genai.configure(api_key=settings.gemini_api_key)
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
