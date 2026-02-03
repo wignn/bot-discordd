@@ -60,9 +60,18 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # CORS - allow frontend in production
+    allowed_origins = ["*"] if settings.is_development else [
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ]
+    # Add custom origins from environment if set
+    if hasattr(settings, 'cors_origins') and settings.cors_origins:
+        allowed_origins.extend(settings.cors_origins.split(','))
+    
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if settings.is_development else [],
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

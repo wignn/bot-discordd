@@ -1,6 +1,6 @@
 use crate::commands::Data;
 use crate::services::{get_forex_api, get_forex_ws};
-use poise::serenity_prelude::{CreateAttachment, CreateEmbed, CreateEmbedFooter};
+use poise::serenity_prelude::{CreateAttachment, CreateEmbed};
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -40,10 +40,8 @@ pub async fn fprice(
                 .field("Ask", format!("{:.5}", price.ask), true)
                 .field("Spread", format!("{:.1} pips", price.spread_pips), true)
                 .field("Mid", format!("{:.5}", price.mid), false)
-                .footer(CreateEmbedFooter::new(format!(
-                    "Source: Python Forex Service"
-                )))
-                .color(0x1DB954);
+                .color(0x1DB954)
+                .timestamp(serenity::model::Timestamp::now());
 
             send_embed(ctx, embed).await?;
         }
@@ -121,7 +119,7 @@ pub async fn chart(
                 .title(format!("{} Chart - {}", symbol.to_uppercase(), tf))
                 .image(format!("attachment://{}_{}.png", symbol.to_lowercase(), tf))
                 .color(0x1DB954)
-                .footer(CreateEmbedFooter::new("Powered by Python Forex Service"));
+                .timestamp(serenity::model::Timestamp::now());
 
             ctx.send(
                 poise::CreateReply::default()
@@ -188,7 +186,8 @@ pub async fn compare(
     match api_client.get_comparison_chart(&symbols, mins).await {
         Ok(image_bytes) => {
             let symbols_str = symbols.join("_");
-            let attachment = CreateAttachment::bytes(image_bytes, format!("compare_{}.png", symbols_str));
+            let attachment =
+                CreateAttachment::bytes(image_bytes, format!("compare_{}.png", symbols_str));
 
             let embed = CreateEmbed::new()
                 .title("Pair Comparison")
@@ -203,7 +202,7 @@ pub async fn compare(
                 ))
                 .image(format!("attachment://compare_{}.png", symbols_str))
                 .color(0x1DB954)
-                .footer(CreateEmbedFooter::new("Normalized to percentage change"));
+                .timestamp(serenity::model::Timestamp::now());
 
             ctx.send(
                 poise::CreateReply::default()
@@ -310,9 +309,33 @@ pub async fn analysis(
                     tf,
                     trend_label
                 ))
-                .field("Moving Averages", if ma_text.is_empty() { "N/A".to_string() } else { ma_text }, true)
-                .field("Oscillators", if oscillator_text.is_empty() { "N/A".to_string() } else { oscillator_text }, true)
-                .field("Volatility", if volatility_text.is_empty() { "N/A".to_string() } else { volatility_text }, true)
+                .field(
+                    "Moving Averages",
+                    if ma_text.is_empty() {
+                        "N/A".to_string()
+                    } else {
+                        ma_text
+                    },
+                    true,
+                )
+                .field(
+                    "Oscillators",
+                    if oscillator_text.is_empty() {
+                        "N/A".to_string()
+                    } else {
+                        oscillator_text
+                    },
+                    true,
+                )
+                .field(
+                    "Volatility",
+                    if volatility_text.is_empty() {
+                        "N/A".to_string()
+                    } else {
+                        volatility_text
+                    },
+                    true,
+                )
                 .field(
                     "Trend",
                     format!("{}", indicators.trend_direction.to_uppercase()),

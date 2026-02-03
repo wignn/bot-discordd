@@ -213,6 +213,22 @@ services:
     profiles:
       - admin
 
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=${FRONTEND_API_URL:-http://news-api:8000}
+        - VITE_WS_URL=${FRONTEND_WS_URL:-ws://news-api:8000}
+    container_name: forex-frontend
+    image: wign/forex-frontend:latest
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - news-api
+    networks:
+      - forex-network
+
 networks:
   forex-network:
     driver: bridge
