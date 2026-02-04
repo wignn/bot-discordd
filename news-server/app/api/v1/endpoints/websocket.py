@@ -76,6 +76,7 @@ async def discord_bot_endpoint(
     await ws_manager.subscribe(client_id, [
         "all",
         "news",
+        "stock_news",
         "high_impact",
         "sentiment",
         "system",
@@ -128,9 +129,14 @@ async def broadcast_message(
 
 @router.post("/ws/broadcast-article")
 async def broadcast_article(article_data: dict):
-    from app.websocket.events import broadcast_new_article, broadcast_high_impact_alert
+    from app.websocket.events import broadcast_new_article, broadcast_high_impact_alert, broadcast_stock_article
     
-    count = await broadcast_new_article(article_data)
+    asset_type = article_data.get("asset_type", "forex")
+    
+    if asset_type == "stock":
+        count = await broadcast_stock_article(article_data)
+    else:
+        count = await broadcast_new_article(article_data)
     
     is_high_impact = article_data.get("impact_level") == "high" or (
         article_data.get("impact_score") and article_data.get("impact_score") >= 7
@@ -143,6 +149,7 @@ async def broadcast_article(article_data: dict):
         "status": "broadcasted",
         "clients_notified": count,
         "high_impact": is_high_impact,
+        "asset_type": asset_type,
     }
 
 

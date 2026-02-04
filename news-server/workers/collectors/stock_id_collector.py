@@ -19,13 +19,7 @@ INDONESIA_STOCK_FEEDS = [
     {
         "name": "CNBC Indonesia - Market",
         "url": "https://www.cnbcindonesia.com/market",
-        "rss_url": "https://www.cnbcindonesia.com/rss",
-        "category": "market",
-    },
-    {
-        "name": "Kontan - Market",
-        "url": "https://www.kontan.co.id",
-        "rss_url": "https://www.kontan.co.id/feed",
+        "rss_url": "https://www.cnbcindonesia.com/market/rss",
         "category": "market",
     },
     {
@@ -35,23 +29,28 @@ INDONESIA_STOCK_FEEDS = [
         "category": "market",
     },
     {
-        "name": "IDX Channel",
-        "url": "https://www.idxchannel.com",
-        "rss_url": "https://www.idxchannel.com/feed",
-        "category": "idx",
-    },
-    {
-        "name": "IPOTNEWS - Bursa",
-        "url": "https://www.indopremier.com/ipotnews/",
-        "rss_url": "https://www.indopremier.com/ipotnews/index.php/rss/newsDetail.php?group_news=IPOTNEWS",
-        "category": "idx",
-    },
-    {
         "name": "Investing.com Indonesia - Market",
         "url": "https://id.investing.com",
-        "rss_url": "https://id.investing.com/rss/news.rss",
+        "rss_url": "https://id.investing.com/rss/news_25.rss",
         "category": "market",
     },
+    {
+        "name":"Tempo.co - Market",
+        "url":"https://www.tempo.co",
+        "rss_url":"https://rss.tempo.co/bisnis",
+        "category":"market",
+    }, {
+        "name": "Detik - Market",
+        "url": "https://finance.detik.com",
+        "rss_url": "https://finance.detik.com/rss",
+        "category": "market",
+    },
+    {
+        "name":"cnn - market",
+        "url":"https://www.cnnindonesia.com/ekonomi",
+        "rss_url":"https://www.cnnindonesia.com/ekonomi/rss",
+        "category":"market",
+    }
 ]
 
 

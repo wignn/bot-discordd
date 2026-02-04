@@ -19,6 +19,9 @@ class EventType(str, Enum):
     NEWS_UPDATED = "news.updated"
     NEWS_HIGH_IMPACT = "news.high_impact"
     
+    STOCK_NEWS_NEW = "stock.news.new"
+    STOCK_NEWS_HIGH_IMPACT = "stock.news.high_impact"
+    
     ANALYSIS_COMPLETE = "analysis.complete"
     SENTIMENT_ALERT = "sentiment.alert"
     

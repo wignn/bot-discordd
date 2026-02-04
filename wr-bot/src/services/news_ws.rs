@@ -1,4 +1,4 @@
-use crate::repository::{DbPool, ForexRepository};
+use crate::repository::{DbPool, ForexRepository, StockRepository};
 use futures_util::{SinkExt, StreamExt};
 use poise::serenity_prelude::{ChannelId, CreateEmbed, CreateMessage, Http};
 use serde::{Deserialize, Serialize};
@@ -32,7 +32,7 @@ pub struct ArticleData {
     pub title: String,
     pub title_id: Option<String>,
     pub summary: Option<String>,
-    pub summary_id: Option<String>,  // Indonesian summary
+    pub summary_id: Option<String>, // Indonesian summary
     pub source_name: String,
     pub original_url: String,
     pub sentiment: Option<String>,
@@ -180,6 +180,9 @@ impl NewsWebSocketService {
             "news.new" | "news.high_impact" => {
                 self.handle_news_event(&event).await?;
             }
+            "stock.news.new" | "stock.news.high_impact" => {
+                self.handle_stock_news_event(&event).await?;
+            }
             "sentiment.alert" => {
                 println!("[NEWS-WS] Received sentiment alert");
             }
@@ -268,6 +271,82 @@ impl NewsWebSocketService {
 
         println!(
             "[NEWS-WS] Sent news to {} channels: {}",
+            channels.len(),
+            article.title
+        );
+
+        Ok(())
+    }
+
+    async fn handle_stock_news_event(
+        &self,
+        event: &NewsEvent,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let data = event.data.as_ref().ok_or("No data in event")?;
+        let article = data.article.as_ref().ok_or("No article in event")?;
+        let discord_embed = data.discord_embed.as_ref().ok_or("No embed in event")?;
+
+        if StockRepository::is_stock_news_sent(&self.db, &article.id).await? {
+            return Ok(());
+        }
+
+        let channels = StockRepository::get_active_channels(&self.db).await?;
+
+        if channels.is_empty() {
+            return Ok(());
+        }
+
+        let mut embed = CreateEmbed::new();
+
+        if let Some(title) = &discord_embed.title {
+            embed = embed.title(title);
+        }
+        if let Some(desc) = &discord_embed.description {
+            embed = embed.description(desc);
+        }
+        if let Some(url) = &discord_embed.url {
+            embed = embed.url(url);
+        }
+        if let Some(color) = discord_embed.color {
+            embed = embed.color(color);
+        }
+        if let Some(fields) = &discord_embed.fields {
+            for field in fields {
+                embed = embed.field(&field.name, &field.value, field.inline);
+            }
+        }
+        if let Some(thumbnail) = &discord_embed.thumbnail {
+            embed = embed.thumbnail(&thumbnail.url);
+        }
+        if let Some(footer) = &discord_embed.footer {
+            embed = embed.footer(poise::serenity_prelude::CreateEmbedFooter::new(
+                &footer.text,
+            ));
+        }
+
+        let is_high_impact = event.event == "stock.news.high_impact";
+
+        for channel in &channels {
+            let channel_id = ChannelId::new(channel.channel_id as u64);
+
+            let mut message = CreateMessage::new().embed(embed.clone());
+
+            if is_high_impact && channel.mention_everyone {
+                message = message.content("@everyone **BERITA SAHAM PENTING**");
+            }
+
+            if let Err(e) = channel_id.send_message(&self.http, message).await {
+                println!(
+                    "[STOCK-WS] Failed to send to channel {}: {}",
+                    channel.channel_id, e
+                );
+            }
+        }
+        
+        StockRepository::insert_stock_news(&self.db, &article.id, &article.source_name).await?;
+
+        println!(
+            "[STOCK-WS] Sent stock news to {} channels: {}",
             channels.len(),
             article.title
         );

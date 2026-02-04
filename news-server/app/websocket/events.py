@@ -195,6 +195,145 @@ async def broadcast_high_impact_alert(article_data: dict) -> int:
     return count
 
 
+@dataclass
+class StockNewsEvent:
+    id: str
+    title: str
+    summary: str | None
+    content: str | None
+    source_name: str
+    source_url: str
+    original_url: str
+    
+    category: str
+    tickers: list[str]
+    
+    sentiment: str | None
+    impact_level: str | None
+    
+    published_at: str | None
+    processed_at: str
+    
+    def to_dict(self) -> dict:
+        return asdict(self)
+    
+    def to_discord_embed(self) -> dict:
+        color_map = {
+            "bullish": 0x00FF00,
+            "bearish": 0xFF0000,
+            "neutral": 0x808080,
+        }
+        color = color_map.get(self.sentiment, 0x5865F2)
+        
+        impact_bars = {
+            "high": "▰▰▰",
+            "medium": "▰▰▱",
+            "low": "▰▱▱",
+        }
+        impact_bar = impact_bars.get(self.impact_level, "▰▱▱")
+        
+        tickers_str = ", ".join(self.tickers[:5]) if self.tickers else "-"
+        
+        time_str = ""
+        if self.published_at:
+            try:
+                dt = datetime.fromisoformat(self.published_at.replace('Z', '+00:00'))
+                time_str = dt.strftime("%H:%M WIB")
+            except:
+                time_str = "N/A"
+        
+        category_display = self.category.upper() if self.category else "MARKET"
+        
+        description_parts = [
+            f"**{category_display}**",
+            self.title,
+            "",
+            self.summary[:300] if self.summary else "",
+        ]
+        description = "\n".join(description_parts)
+        
+        fields = [
+            {
+                "name": "Waktu",
+                "value": time_str or "N/A",
+                "inline": True,
+            },
+            {
+                "name": "Impact",
+                "value": impact_bar,
+                "inline": True,
+            },
+        ]
+        
+        if self.tickers:
+            fields.append({
+                "name": "Tickers",
+                "value": tickers_str,
+                "inline": True,
+            })
+        
+        fields.append({
+            "name": "Sumber",
+            "value": f"[Baca Selengkapnya]({self.original_url})",
+            "inline": False,
+        })
+        
+        footer_date = ""
+        if self.published_at:
+            try:
+                dt = datetime.fromisoformat(self.published_at.replace('Z', '+00:00'))
+                footer_date = dt.strftime("%d/%m/%Y %H:%M")
+            except:
+                footer_date = ""
+        
+        return {
+            "title": self.title,
+            "description": description,
+            "color": color,
+            "fields": fields,
+            "footer": {
+                "text": f"Stock Alert • {self.source_name} • {footer_date}",
+            },
+        }
+
+
+async def broadcast_stock_article(article_data: dict) -> int:
+    event = StockNewsEvent(
+        id=article_data.get("id", ""),
+        title=article_data.get("original_title") or article_data.get("title", ""),
+        summary=article_data.get("summary"),
+        content=article_data.get("content"),
+        source_name=article_data.get("source_name", "Unknown"),
+        source_url=article_data.get("source_url", ""),
+        original_url=article_data.get("url", ""),
+        category=article_data.get("category", "market"),
+        tickers=article_data.get("tickers", []),
+        sentiment=article_data.get("sentiment"),
+        impact_level=article_data.get("impact_level"),
+        published_at=article_data.get("published_at"),
+        processed_at=datetime.utcnow().isoformat(),
+    )
+    
+    count = await ws_manager.broadcast(
+        event=EventType.STOCK_NEWS_NEW,
+        data={
+            "article": event.to_dict(),
+            "discord_embed": event.to_discord_embed(),
+            "asset_type": "stock",
+        },
+        channel="stock_news",
+    )
+    
+    logger.info(
+        "Broadcasted stock article",
+        article_id=event.id,
+        tickers=event.tickers,
+        clients_notified=count,
+    )
+    
+    return count
+
+
 async def broadcast_sentiment_alert(
     currency_pair: str,
     sentiment: str,
