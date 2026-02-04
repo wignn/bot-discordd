@@ -84,21 +84,50 @@ def broadcast_article(self, article_data: dict):
             try:
                 from sqlalchemy import text
                 from app.db.session import get_sync_db
+                import uuid
                 
                 with get_sync_db() as session:
+                    source_result = session.execute(
+                        text("SELECT id FROM news_sources WHERE slug = 'default' LIMIT 1")
+                    )
+                    source_row = source_result.fetchone()
+                    
+                    if source_row:
+                        source_id = source_row[0]
+                    else:
+                        new_source_id = str(uuid.uuid4())
+                        session.execute(
+                            text("""
+                                INSERT INTO news_sources (id, name, slug, source_type, url, is_active)
+                                VALUES (:id, 'Default Source', 'default', 'rss', 'https://example.com', TRUE)
+                                ON CONFLICT (slug) DO NOTHING
+                            """),
+                            {"id": new_source_id}
+                        )
+                        session.commit()
+                        source_id = new_source_id
+                    
+                    article_id = str(uuid.uuid4())
+                    published_at = article_data.get("published_at")
+                    source_name = article_data.get("source_name", "Unknown")
+                    
                     session.execute(
                         text("""
-                            INSERT INTO news_articles (content_hash, original_url, original_title, original_content, translated_title, summary, is_processed, processed_at)
-                            VALUES (:hash, :url, :title, :content, :translated_title, :summary, TRUE, NOW())
+                            INSERT INTO news_articles (id, source_id, content_hash, original_url, original_title, original_content, translated_title, summary, is_processed, processed_at, published_at, author)
+                            VALUES (:id, :source_id, :hash, :url, :title, :content, :translated_title, :summary, TRUE, NOW(), :published_at, :author)
                             ON CONFLICT (content_hash) DO NOTHING
                         """),
                         {
+                            "id": article_id,
+                            "source_id": source_id,
                             "hash": content_hash,
                             "url": url,
                             "title": title,
                             "content": content[:5000] if content else "",
                             "translated_title": "",
                             "summary": summary,
+                            "published_at": published_at,
+                            "author": source_name,
                         }
                     )
                 logger.info("Article saved", url=url[:50] if url else "")

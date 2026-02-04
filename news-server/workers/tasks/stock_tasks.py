@@ -106,6 +106,49 @@ def process_stock_entry(self, entry_data: dict):
             except Exception as db_error:
                 logger.warning("DB save failed", error=str(db_error))
             
+            # HTTP broadcast to news-api (for Discord bots)
+            try:
+                import httpx
+                
+                broadcast_data = {
+                    "id": content_hash,
+                    "original_title": title,
+                    "translated_title": title,  # Use same title for now
+                    "summary": summary,
+                    "source_name": source_name,
+                    "source_url": link,
+                    "url": link,
+                    "sentiment": sentiment,
+                    "sentiment_confidence": 0.5,
+                    "impact_level": impact_level,
+                    "impact_score": 7 if impact_level == "high" else 5 if impact_level == "medium" else 3,
+                    "currency_pairs": [],  # Not applicable for stocks
+                    "currencies": [],
+                    "published_at": published_at,
+                    "image_url": None,
+                    # Stock-specific fields
+                    "tickers": tickers,
+                    "category": category,
+                    "asset_type": "stock",
+                }
+                
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    response = await client.post(
+                        "http://news-api:8000/api/v1/stream/ws/broadcast-article",
+                        json=broadcast_data,
+                    )
+                    if response.status_code == 200:
+                        result_data = response.json()
+                        logger.info(
+                            "Stock broadcast ok",
+                            clients=result_data.get("clients_notified", 0),
+                            title=title[:50] if title else "",
+                        )
+                    else:
+                        logger.warning("Stock broadcast error", status=response.status_code)
+            except Exception as http_error:
+                logger.warning("Stock HTTP broadcast failed", error=str(http_error))
+            
             logger.info("Stock processed", title=title[:50], tickers=tickers)
             
             return {"success": True, "hash": content_hash}

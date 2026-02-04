@@ -1,6 +1,3 @@
-# Cloudflare Tunnel Config untuk wign.cloud
-# Copy ke VPS: ~/.cloudflared/config.yml
-
 tunnel: 6f40336a-d190-42d5-8e2a-806b80cb01ed
 credentials-file: /home/ubuntu/.cloudflared/6f40336a-d190-42d5-8e2a-806b80cb01ed.json
 
