@@ -1,4 +1,4 @@
-use crate::repository::{DbPool, ForexRepository, StockRepository};
+use crate::repository::{CalendarRepository, DbPool, ForexRepository, StockRepository};
 use futures_util::{SinkExt, StreamExt};
 use poise::serenity_prelude::{ChannelId, CreateEmbed, CreateMessage, Http};
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ pub struct NewsEvent {
     pub data: Option<NewsEventData>,
     pub timestamp: Option<String>,
     pub channel: Option<String>,
-    pub message: Option<String>, // For system messages
+    pub message: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,6 +24,20 @@ pub struct NewsEventData {
     pub discord_embed: Option<DiscordEmbed>,
     pub alert: Option<bool>,
     pub mention_everyone: Option<bool>,
+    pub calendar_event: Option<CalendarEventData>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CalendarEventData {
+    pub event_id: String,
+    pub title: String,
+    pub country: String,
+    pub currency: String,
+    pub date_wib: String,
+    pub impact: String,
+    pub forecast: String,
+    pub previous: String,
+    pub minutes_until: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -182,6 +196,9 @@ impl NewsWebSocketService {
             }
             "stock.news.new" | "stock.news.high_impact" => {
                 self.handle_stock_news_event(&event).await?;
+            }
+            "calendar.reminder" => {
+                self.handle_calendar_event(&event).await?;
             }
             "sentiment.alert" => {
                 println!("[NEWS-WS] Received sentiment alert");
@@ -342,13 +359,83 @@ impl NewsWebSocketService {
                 );
             }
         }
-        
+
         StockRepository::insert_stock_news(&self.db, &article.id, &article.source_name).await?;
 
         println!(
             "[STOCK-WS] Sent stock news to {} channels: {}",
             channels.len(),
             article.title
+        );
+
+        Ok(())
+    }
+
+    async fn handle_calendar_event(
+        &self,
+        event: &NewsEvent,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let data = event.data.as_ref().ok_or("No data in calendar event")?;
+        let calendar_event = data
+            .calendar_event
+            .as_ref()
+            .ok_or("No calendar_event in event data")?;
+
+        if CalendarRepository::is_event_sent(&self.db, &calendar_event.event_id).await? {
+            return Ok(());
+        }
+
+        let channels = CalendarRepository::get_active_channels(&self.db).await?;
+
+        if channels.is_empty() {
+            return Ok(());
+        }
+
+        let embed = CreateEmbed::new()
+            .title("CALENDAR REMINDER")
+            .description(format!(
+                "**{} - {}**",
+                calendar_event.currency, calendar_event.title
+            ))
+            .field("Waktu", &calendar_event.date_wib, true)
+            .field("Forecast", &calendar_event.forecast, true)
+            .field("Previous", &calendar_event.previous, true)
+            .field(
+                "Status",
+                format!(
+                    "High impact event starting in {} minutes",
+                    calendar_event.minutes_until
+                ),
+                false,
+            )
+            .color(0xDC3545)
+            .footer(poise::serenity_prelude::CreateEmbedFooter::new("Fio"))
+            .timestamp(poise::serenity_prelude::Timestamp::now());
+
+        for channel in &channels {
+            let channel_id = ChannelId::new(channel.channel_id as u64);
+
+            let mut message = CreateMessage::new().embed(embed.clone());
+
+            if channel.mention_everyone {
+                message = message.content("@everyone **HIGH IMPACT EVENT**");
+            }
+
+            if let Err(e) = channel_id.send_message(&self.http, message).await {
+                println!(
+                    "[CALENDAR-WS] Failed to send to channel {}: {}",
+                    channel.channel_id, e
+                );
+            }
+        }
+
+        CalendarRepository::insert_event(&self.db, &calendar_event.event_id, &calendar_event.title)
+            .await?;
+
+        println!(
+            "[CALENDAR-WS] Sent reminder to {} channels: {}",
+            channels.len(),
+            calendar_event.title
         );
 
         Ok(())

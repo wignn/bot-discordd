@@ -8,7 +8,9 @@ use songbird::SerenityInit;
 use std::collections::HashSet;
 use std::env;
 use std::sync::Arc;
-use worm::commands::{Data, admin, ai, chart, forex, general, moderation, music, ping, price, stock, sys};
+use worm::commands::{
+    Data, admin, ai, calendar, chart, forex, general, moderation, music, ping, price, stock, sys,
+};
 use worm::config::Config;
 use worm::error::BotError;
 use worm::handlers::{handle_event, handle_track_end, on_error};
@@ -130,6 +132,12 @@ async fn main() -> Result<(), BotError> {
                 forex::forex_enable(),
                 forex::forex_status(),
                 forex::forex_calendar(),
+                // Calendar reminder commands
+                calendar::calendar_setup(),
+                calendar::calendar_disable(),
+                calendar::calendar_enable(),
+                calendar::calendar_status(),
+                calendar::calendar_mention(),
                 // Price commands
                 price::price(),
                 price::alert(),
@@ -222,11 +230,14 @@ async fn main() -> Result<(), BotError> {
                 if let Ok(forex_service_url) = env::var("FOREX_SERVICE_URL") {
                     let http_for_forex = ctx.http.clone();
                     worm::services::init_forex_clients(&forex_service_url, http_for_forex);
-                    
+
                     tokio::spawn(async move {
                         worm::services::start_forex_ws().await;
                     });
-                    println!("[OK] Python Forex Service client initialized ({})", forex_service_url);
+                    println!(
+                        "[OK] Python Forex Service client initialized ({})",
+                        forex_service_url
+                    );
                 } else {
                     println!("[WARN] Python Forex Service not configured (no FOREX_SERVICE_URL)");
                 }

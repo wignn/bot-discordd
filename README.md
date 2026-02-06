@@ -1,6 +1,6 @@
-# Forex News Discord Bot
+# Fio - Forex News Discord Bot
 
-Real-time forex news monitoring platform with automatic Discord notifications.
+Real-time forex news monitoring platform with automatic Discord notifications and economic calendar reminders.
 
 ## Table of Contents
 
@@ -140,10 +140,12 @@ forex/
 │       ├── celery_app.py
 │       ├── collectors/
 │       │   ├── rss_collector.py
-│       │   └── stock_id_collector.py
+│       │   ├── stock_id_collector.py
+│       │   └── calendar_collector.py
 │       ├── scrapers/
 │       └── tasks/
 │           ├── broadcast_tasks.py
+│           ├── calendar_tasks.py
 │           ├── collection_tasks.py
 │           ├── scraping_tasks.py
 │           ├── stock_tasks.py
@@ -156,13 +158,20 @@ forex/
     │   ├── commands/
     │   │   ├── admin.rs
     │   │   ├── ai.rs
+    │   │   ├── calendar.rs
+    │   │   ├── chart.rs
     │   │   ├── forex.rs
     │   │   ├── general.rs
     │   │   ├── moderation.rs
     │   │   ├── music.rs
-    │   │   └── price.rs
+    │   │   ├── price.rs
+    │   │   └── stock.rs
     │   ├── handlers/
     │   ├── repository/
+    │   │   ├── calendar.rs
+    │   │   ├── forex.rs
+    │   │   ├── moderation.rs
+    │   │   └── stock.rs
     │   └── services/
     │       ├── news_ws.rs
     │       ├── tiingo.rs
@@ -205,14 +214,35 @@ forex/
 - Direct broadcast to Discord
 - Translation endpoint available for manual use
 
-### Discord Bot
+### Discord Bot (Fio)
 
 - Real-time forex news notifications
-- Configurable alert channels per server
+- Economic calendar reminders (15 min before high-impact events)
+- Separate channels for news and calendar
+- WIB timezone support for calendar events
 - Music playback with queue management
 - AI chat integration (Gemini)
 - Moderation tools (warn, kick, ban, timeout)
-- Forex price lookups
+- Forex price lookups and charts
+- Stock news notifications
+
+### Discord Commands
+
+| Command | Description |
+|---------|-------------|
+| `/forex_setup #channel` | Setup forex news notifications |
+| `/forex_disable` | Disable forex news |
+| `/forex_enable` | Re-enable forex news |
+| `/forex_status` | Check forex news status |
+| `/forex_calendar` | View high-impact events |
+| `/calendar_setup #channel` | Setup calendar reminders (separate channel) |
+| `/calendar_disable` | Disable calendar reminders |
+| `/calendar_enable` | Re-enable calendar reminders |
+| `/calendar_status` | Check calendar status |
+| `/calendar_mention true/false` | Toggle @everyone for events |
+| `/stocknews #channel` | Setup stock news notifications |
+| `/price SYMBOL` | Get current forex price |
+| `/chart SYMBOL` | Get forex chart |
 
 ### Translation Endpoint
 
@@ -349,6 +379,8 @@ Connect to `/api/v1/stream/ws/discord?bot_id={bot_id}` for real-time events.
 Event types:
 - `news.new` - New article
 - `news.high_impact` - High impact news alert
+- `stock.news.new` - Stock news article
+- `calendar.reminder` - Economic calendar reminder
 - `connected` - Connection established
 - `heartbeat` - Keep-alive ping
 

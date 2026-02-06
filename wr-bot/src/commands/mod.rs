@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod ai;
+pub mod calendar;
 pub mod chart;
 pub mod forex;
 pub mod general;

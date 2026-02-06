@@ -209,3 +209,34 @@ async def test_high_impact_broadcast():
         "message": "High impact alert broadcasted",
         "clients_notified": count,
     }
+
+
+@router.post("/ws/broadcast-calendar")
+async def broadcast_calendar(calendar_data: dict):
+    from app.websocket.manager import ws_manager
+    
+    event_data = {
+        "calendar_event": {
+            "event_id": calendar_data.get("event_id", ""),
+            "title": calendar_data.get("title", ""),
+            "country": calendar_data.get("country", ""),
+            "currency": calendar_data.get("currency", ""),
+            "date_wib": calendar_data.get("date_wib", ""),
+            "impact": calendar_data.get("impact", "high"),
+            "forecast": calendar_data.get("forecast", "—"),
+            "previous": calendar_data.get("previous", "—"),
+            "minutes_until": calendar_data.get("minutes_until", 15),
+        }
+    }
+    
+    count = await ws_manager.broadcast(
+        event="calendar.reminder",
+        data=event_data,
+        channel="all",
+    )
+    
+    return {
+        "status": "broadcasted",
+        "clients_notified": count,
+        "event_title": calendar_data.get("title", ""),
+    }

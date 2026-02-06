@@ -20,6 +20,7 @@ celery_app = Celery(
         "workers.tasks.maintenance_tasks",
         "workers.tasks.websocket_tasks",
         "workers.tasks.stock_tasks",
+        "workers.tasks.calendar_tasks",
     ],
 )
 
@@ -76,12 +77,16 @@ celery_app.conf.beat_schedule = {
         "task": "workers.tasks.maintenance_tasks.update_source_statistics",
         "schedule": crontab(minute=0),
     },
+    
+    "check-calendar-reminders": {
+        "task": "workers.tasks.calendar_tasks.check_calendar_reminders",
+        "schedule": crontab(minute="*/5"),
+    },
 }
 
 
 @worker_process_init.connect
 def init_worker_process(**kwargs):
-    # Re-configure Gemini after fork (for translate endpoint)
     try:
         import google.generativeai as genai
         from app.core.config import settings
