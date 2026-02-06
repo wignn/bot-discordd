@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+from datetime import datetime, timezone, timedelta
 
 from celery import shared_task
 from sqlalchemy import text
@@ -10,6 +11,8 @@ from workers.collectors.rss_collector import RSSCollector, DEFAULT_FOREX_FEEDS
 
 
 logger = get_logger(__name__)
+
+MAX_NEWS_AGE_HOURS = 2
 
 _FEED_NAME_MAP = {feed["rss_url"]: feed["name"] for feed in DEFAULT_FOREX_FEEDS}
 
@@ -66,6 +69,22 @@ def process_rss_entry(self, entry_data: dict, feed_url: str, source_id: str = No
     title = entry_data.get("title", "")
     content_hash = hashlib.sha256(f"{url}{title}".encode()).hexdigest()
     
+    published_at = entry_data.get("published_at")
+    if published_at:
+        try:
+            if isinstance(published_at, str):
+                from dateutil import parser as date_parser
+                published_at = date_parser.parse(published_at)
+            
+            if published_at.tzinfo is None:
+                published_at = published_at.replace(tzinfo=timezone.utc)
+            
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=MAX_NEWS_AGE_HOURS)
+            if published_at < cutoff_time:
+                return {"status": "skipped", "reason": "too_old", "url": url}
+        except Exception:
+            pass
+    
     try:
         with get_sync_db() as session:
             result = session.execute(
@@ -83,6 +102,7 @@ def process_rss_entry(self, entry_data: dict, feed_url: str, source_id: str = No
     description = entry_data.get("summary", "") or entry_data.get("description", "")
     
     if len(content) < 200:
+        entry_data["source_name"] = _FEED_NAME_MAP.get(feed_url, "Unknown")
         scrape_article.delay(url, entry_data)
     else:
         source_name = _FEED_NAME_MAP.get(feed_url, "Unknown")

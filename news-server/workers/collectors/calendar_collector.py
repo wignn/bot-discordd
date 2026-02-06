@@ -1,8 +1,3 @@
-"""
-Calendar Event Collector for Forex Factory
-
-Fetches high-impact economic events from Forex Factory API.
-"""
 import httpx
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
@@ -14,10 +9,8 @@ from app.core.config import settings
 
 logger = get_logger(__name__)
 
-# Forex Factory free API
 FOREX_FACTORY_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 
-# WIB timezone (UTC+7)
 WIB = ZoneInfo("Asia/Jakarta")
 
 
@@ -27,14 +20,13 @@ class CalendarEvent:
     country: str
     currency: str
     date_utc: datetime
-    date_wib: str  # Formatted WIB time string
+    date_wib: str
     impact: str
     forecast: str
     previous: str
-    event_id: str  # For deduplication
+    event_id: str
 
     def minutes_until(self) -> int:
-        """Minutes until this event starts."""
         now = datetime.now(timezone.utc)
         delta = self.date_utc - now
         return int(delta.total_seconds() / 60)
@@ -66,7 +58,6 @@ class CalendarCollector:
         await self.client.aclose()
 
     async def fetch_events(self) -> list[CalendarEvent]:
-        """Fetch all events from Forex Factory."""
         try:
             response = await self.client.get(FOREX_FACTORY_URL)
             response.raise_for_status()
@@ -90,7 +81,6 @@ class CalendarCollector:
             return []
 
     def _parse_event(self, item: dict) -> CalendarEvent | None:
-        """Parse a single event from JSON."""
         try:
             title = item.get("title", "").strip()
             country = item.get("country", "").strip()
@@ -100,7 +90,6 @@ class CalendarCollector:
             if not title or not date_str:
                 return None
 
-            # Parse date - format: "2026-02-07T13:30:00-05:00"
             try:
                 date_utc = datetime.fromisoformat(date_str)
                 if date_utc.tzinfo is None:
@@ -110,11 +99,9 @@ class CalendarCollector:
             except Exception:
                 return None
 
-            # Convert to WIB
             date_wib_obj = date_utc.astimezone(WIB)
             date_wib = date_wib_obj.strftime("%d/%m %H:%M WIB")
 
-            # Currency mapping
             currency_map = {
                 "USD": "USD 🇺🇸",
                 "EUR": "EUR 🇪🇺",
@@ -128,7 +115,6 @@ class CalendarCollector:
             }
             currency = currency_map.get(country.upper(), country)
 
-            # Generate event ID for deduplication
             event_id = f"{date_str}_{country}_{title[:30]}"
 
             return CalendarEvent(
@@ -152,32 +138,15 @@ class CalendarCollector:
         minutes_before: int = 15,
         minutes_window: int = 5,
     ) -> list[CalendarEvent]:
-        """
-        Get high-impact events starting within the specified time window.
-        
-        Args:
-            minutes_before: Alert X minutes before event (default: 15)
-            minutes_window: Window size in minutes (default: 5)
-            
-        Returns:
-            List of events starting between (minutes_before - minutes_window) 
-            and minutes_before from now.
-            
-        Example:
-            minutes_before=15, minutes_window=5
-            Returns events starting in 10-15 minutes.
-        """
         events = await self.fetch_events()
         upcoming = []
 
         for event in events:
-            # Filter high impact only
             if event.impact.lower() not in ("high", "red"):
                 continue
 
             mins = event.minutes_until()
             
-            # Check if within window
             min_bound = minutes_before - minutes_window
             max_bound = minutes_before
             

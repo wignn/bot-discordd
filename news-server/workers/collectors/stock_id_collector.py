@@ -210,7 +210,6 @@ class StockIDCollector:
             return None
 
     def _is_relevant(self, entry: StockNewsEntry) -> bool:
-        """Check if entry is relevant using optimized keyword matching."""
         if entry.tickers:
             return True
         
@@ -253,7 +252,6 @@ class StockIDCollector:
         return results
 
     async def fetch_latest(self, max_entries: int = 50) -> list[StockNewsEntry]:
-        """Fetch latest stock news from all sources"""
         all_entries = []
         
         results = await self.fetch_all_feeds(delay=0.5)

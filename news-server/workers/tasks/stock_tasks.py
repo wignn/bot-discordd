@@ -1,11 +1,16 @@
 import asyncio
 from celery import shared_task
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
+from sqlalchemy import text
 
 from app.core.logging import get_logger
+from app.db.session import get_sync_db
 
 
 logger = get_logger(__name__)
+
+MAX_STOCK_NEWS_AGE_HOURS = 2
 
 
 @shared_task(bind=True, max_retries=3)
@@ -36,6 +41,35 @@ def process_stock_entry(self, entry_data: dict):
     async def _process():
         try:
             content_hash = entry_data.get("content_hash", "")
+            
+            published_at_raw = entry_data.get("published_at")
+            if published_at_raw:
+                try:
+                    if isinstance(published_at_raw, str):
+                        from dateutil import parser as date_parser
+                        pub_dt = date_parser.parse(published_at_raw)
+                    else:
+                        pub_dt = published_at_raw
+                    
+                    if pub_dt.tzinfo is None:
+                        pub_dt = pub_dt.replace(tzinfo=timezone.utc)
+                    
+                    cutoff_time = datetime.now(timezone.utc) - timedelta(hours=MAX_STOCK_NEWS_AGE_HOURS)
+                    if pub_dt < cutoff_time:
+                        return {"status": "skipped", "reason": "too_old", "hash": content_hash}
+                except Exception:
+                    pass
+            
+            try:
+                with get_sync_db() as session:
+                    result = session.execute(
+                        text("SELECT 1 FROM stock_news WHERE content_hash = :hash LIMIT 1"),
+                        {"hash": content_hash}
+                    )
+                    if result.scalar() is not None:
+                        return {"status": "skipped", "reason": "duplicate", "hash": content_hash}
+            except Exception as e:
+                logger.warning("Failed to check stock duplicate", error=str(e))
             
             title = entry_data.get("title", "")
             content = entry_data.get("content", "")
@@ -106,14 +140,13 @@ def process_stock_entry(self, entry_data: dict):
             except Exception as db_error:
                 logger.warning("DB save failed", error=str(db_error))
             
-            # HTTP broadcast to news-api (for Discord bots)
             try:
                 import httpx
                 
                 broadcast_data = {
                     "id": content_hash,
                     "original_title": title,
-                    "translated_title": title,  # Use same title for now
+                    "translated_title": title,
                     "summary": summary,
                     "source_name": source_name,
                     "source_url": link,
@@ -122,11 +155,10 @@ def process_stock_entry(self, entry_data: dict):
                     "sentiment_confidence": 0.5,
                     "impact_level": impact_level,
                     "impact_score": 7 if impact_level == "high" else 5 if impact_level == "medium" else 3,
-                    "currency_pairs": [],  # Not applicable for stocks
+                    "currency_pairs": [],
                     "currencies": [],
                     "published_at": published_at,
                     "image_url": None,
-                    # Stock-specific fields
                     "tickers": tickers,
                     "category": category,
                     "asset_type": "stock",
