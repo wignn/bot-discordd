@@ -1,4 +1,3 @@
-"""Stock news WebSocket manager."""
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -10,14 +9,12 @@ from fastapi import WebSocket
 
 @dataclass
 class StockWebSocketConnection:
-    """Represents a WebSocket connection for stock news."""
     websocket: WebSocket
     subscribed_channels: set[str] = field(default_factory=set)
     connected_at: datetime = field(default_factory=datetime.utcnow)
 
 
 class StockWebSocketManager:
-    """Manages WebSocket connections for stock news."""
 
     def __init__(self):
         self.connections: list[StockWebSocketConnection] = []

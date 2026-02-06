@@ -1,9 +1,3 @@
-"""
-Stock News API Router
-
-REST endpoints for Indonesian stock market news.
-"""
-
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from datetime import datetime

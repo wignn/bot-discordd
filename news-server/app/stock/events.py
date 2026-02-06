@@ -21,12 +21,12 @@ class StockNewsEvent:
     source_name: str
     source_url: str
     original_url: str
-    category: str  # market, emiten, idx, etc.
+    category: str
     
-    tickers: list[str]  # Stock codes like BBCA, TLKM
+    tickers: list[str]
     
-    sentiment: str | None  # bullish, bearish, neutral
-    impact_level: str | None  # high, medium, low
+    sentiment: str | None
+    impact_level: str | None
     
     published_at: str | None
     processed_at: str
@@ -35,13 +35,12 @@ class StockNewsEvent:
         return asdict(self)
     
     def to_discord_embed(self) -> dict:
-        """Convert to Discord embed format"""
         color_map = {
-            "bullish": 0x00FF00,  # Green
-            "bearish": 0xFF0000,  # Red
-            "neutral": 0x808080,  # Gray
+            "bullish": 0x00FF00,
+            "bearish": 0xFF0000,
+            "neutral": 0x808080,
         }
-        color = color_map.get(self.sentiment, 0x2962FF)  # Default blue
+        color = color_map.get(self.sentiment, 0x2962FF)
         
         impact_bars = {
             "high": "▰▰▰",
@@ -50,7 +49,6 @@ class StockNewsEvent:
         }
         impact_bar = impact_bars.get(self.impact_level, "▱▱▱")
         
-        # Category label
         category_labels = {
             "market": "MARKET",
             "emiten": "EMITEN",
@@ -72,7 +70,6 @@ class StockNewsEvent:
         if self.tickers:
             tickers_str = " | " + ", ".join(self.tickers[:5])
         
-        # Build embed
         embed = {
             "title": self.title[:256],
             "description": "",
@@ -83,14 +80,12 @@ class StockNewsEvent:
             },
         }
         
-        # Add category and tickers
         header = f"**{category_label}**{tickers_str}"
         if self.title:
             header += f"\n{self.title}"
         
         embed["description"] = header
         
-        # Add summary/content
         if self.summary:
             embed["fields"].append({
                 "name": "Ringkasan",
@@ -104,7 +99,6 @@ class StockNewsEvent:
                 "inline": False,
             })
         
-        # Add time and impact
         embed["fields"].append({
             "name": "Waktu",
             "value": time_str or "N/A",
@@ -116,7 +110,6 @@ class StockNewsEvent:
             "inline": True,
         })
         
-        # Add source link
         embed["fields"].append({
             "name": "Sumber",
             "value": f"[Baca Selengkapnya]({self.original_url})",
@@ -126,7 +119,6 @@ class StockNewsEvent:
         return embed
 
 
-# WebSocket event types for stock news
 class StockEventType:
     STOCK_NEW = "stock.new"
     STOCK_HIGH_IMPACT = "stock.high_impact"
@@ -135,16 +127,13 @@ class StockEventType:
 
 
 async def broadcast_stock_news(event: StockNewsEvent):
-    """Broadcast stock news to WebSocket clients"""
     from app.stock.ws_manager import get_stock_ws_manager
     
     event_type = StockEventType.STOCK_NEW
     
-    # Check if high impact
     if event.impact_level == "high" or (event.tickers and len(event.tickers) >= 3):
         event_type = StockEventType.STOCK_HIGH_IMPACT
     
-    # Use stock-specific WebSocket manager
     manager = get_stock_ws_manager()
     await manager.broadcast(
         channel=event_type,

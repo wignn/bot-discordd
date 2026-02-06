@@ -1,4 +1,3 @@
-"""Stock News API Endpoints"""
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +15,6 @@ async def get_latest_stock_news(
     limit: int = Query(default=10, le=50),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get latest stock news from database"""
     try:
         result = await db.execute(
             text("""
