@@ -15,7 +15,6 @@ logger = get_logger(__name__)
 class StockNewsEvent:
     id: str
     title: str
-    summary: str | None
     content: str | None
     
     source_name: str
@@ -86,13 +85,7 @@ class StockNewsEvent:
         
         embed["description"] = header
         
-        if self.summary:
-            embed["fields"].append({
-                "name": "Ringkasan",
-                "value": self.summary[:1024],
-                "inline": False,
-            })
-        elif self.content:
+        if self.content:
             embed["fields"].append({
                 "name": "Isi Berita",
                 "value": self.content[:500] + "..." if len(self.content) > 500 else self.content,

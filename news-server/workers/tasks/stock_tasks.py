@@ -78,7 +78,6 @@ def process_stock_entry(self, entry_data: dict):
             category = entry_data.get("category", "market")
             tickers = entry_data.get("tickers", [])
             
-            summary = content[:500] if content else title
             sentiment = "neutral"
             
             if len(tickers) >= 3:
@@ -95,7 +94,6 @@ def process_stock_entry(self, entry_data: dict):
             event = StockNewsEvent(
                 id=content_hash,
                 title=title,
-                summary=summary,
                 content=content[:1000] if content else None,
                 source_name=source_name,
                 source_url=link,
@@ -117,10 +115,10 @@ def process_stock_entry(self, entry_data: dict):
                 with get_sync_db() as session:
                     session.execute(
                         text("""
-                            INSERT INTO stock_news (content_hash, original_url, title, summary, 
+                            INSERT INTO stock_news (content_hash, original_url, title, 
                                                    source_name, category, tickers, sentiment, 
                                                    impact_level, is_processed, processed_at)
-                            VALUES (:hash, :url, :title, :summary, :source, :category, 
+                            VALUES (:hash, :url, :title, :source, :category, 
                                    :tickers, :sentiment, :impact, TRUE, NOW())
                             ON CONFLICT (content_hash) DO NOTHING
                         """),
@@ -128,7 +126,6 @@ def process_stock_entry(self, entry_data: dict):
                             "hash": content_hash,
                             "url": link,
                             "title": title,
-                            "summary": summary,
                             "source": source_name,
                             "category": category,
                             "tickers": ",".join(tickers),

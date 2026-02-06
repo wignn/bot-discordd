@@ -154,11 +154,11 @@ impl StockNewsWsClient {
     }
 
     fn build_stock_embed(&self, data: &StockNewsData) -> CreateEmbed {
-        // Color based on sentiment
+
         let color = match data.sentiment.as_deref() {
             Some("bullish") => 0x00FF00,
             Some("bearish") => 0xFF0000,
-            _ => 0x2962FF,  // Default blue
+            _ => 0x2962FF, 
         };
 
         let impact_bar = match data.impact_level.as_deref() {
@@ -198,24 +198,16 @@ impl StockNewsWsClient {
                 time_str
             )));
 
-        // Add summary if available
-        if let Some(summary) = &data.summary {
-            embed = embed.field("Ringkasan", summary, false);
-        }
-
-        // Add time and impact
         embed = embed
             .field("Waktu", if time_str.is_empty() { "N/A" } else { &time_str }, true)
             .field("Impact", impact_bar, true);
 
-        // Add source link
         embed = embed.field("Sumber", format!("[Baca Selengkapnya]({})", data.original_url), false);
 
         embed
     }
 }
 
-// Global instance
 use std::sync::OnceLock;
 use tokio::sync::RwLock;
 
