@@ -14,7 +14,7 @@ lavalink:
   server:
     password: ${LAVALINK_PASSWORD:youshallnotpass}
     sources:
-      youtube: false
+      youtube: true
       bandcamp: true
       soundcloud: true
       twitch: true
@@ -50,12 +50,11 @@ plugins:
     allowSearch: true
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
-    apiKey: ${YOUTUBE_API_KEY:}
     clients:
-      - ANDROID_MUSIC
-      - ANDROID_VR
+      - MUSIC
+      - ANDROID_TESTSUITE
       - WEB
-      - TVHTML5_SIMPLY_EMBEDDED_PLAYER
+      - TVHTML5EMBEDDED
   lavasrc:
     providers:
       - "ytsearch:\"%ISRC%\""
