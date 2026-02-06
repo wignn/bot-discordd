@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE calendar_channels SET is_active = FALSE WHERE guild_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f1f1f5f0e3b5bd2e400405f198e186444e3bdb58a5464a9ec3ba2441883694c0"
+}
