@@ -50,7 +50,7 @@ impl StockRepository {
         let channels = sqlx::query_as!(
             StockChannel,
             r#"SELECT id, channel_id, guild_id, tickers_filter, min_impact, 
-                      categories, mention_everyone, is_active 
+                      categories, mention_everyone as "mention_everyone!", is_active as "is_active!" 
                FROM stock_news_channels 
                WHERE is_active = TRUE"#
         )
@@ -67,7 +67,7 @@ impl StockRepository {
         let channel = sqlx::query_as!(
             StockChannel,
             r#"SELECT id, channel_id, guild_id, tickers_filter, min_impact, 
-                      categories, mention_everyone, is_active 
+                      categories, mention_everyone as "mention_everyone!", is_active as "is_active!" 
                FROM stock_news_channels 
                WHERE channel_id = $1"#,
             channel_id as i64,

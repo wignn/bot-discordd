@@ -216,6 +216,7 @@ services:
   frontend:
     build:
       context: ./frontend
+      dockerfile: ../infrastructure/docker/Dockerfile.frontend
       args:
         - VITE_API_URL=${FRONTEND_API_URL:-https://api.wign.cloud}
         - VITE_WS_URL=${FRONTEND_WS_URL:-wss://api.wign.cloud}

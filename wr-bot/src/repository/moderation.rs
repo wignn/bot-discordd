@@ -119,9 +119,6 @@ impl ModerationRepository {
         Ok(result.rows_affected() > 0)
     }
 
-    // ==================== MOD CONFIG ====================
-
-    /// Get mod config for a guild
     pub async fn get_config(
         pool: &PgPool,
         guild_id: u64,
