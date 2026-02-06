@@ -217,12 +217,11 @@ services:
     build:
       context: ./frontend
       dockerfile: ../infrastructure/docker/Dockerfile.frontend
-      args:
-        - VITE_API_URL=${FRONTEND_API_URL:-https://api.wign.cloud}
-        - VITE_WS_URL=${FRONTEND_WS_URL:-wss://api.wign.cloud}
     container_name: forex-frontend
     image: wign/forex-frontend:latest
     restart: unless-stopped
+    env_file:
+      - ./frontend/.env
     ports:
       - "3000:80"
     depends_on:
