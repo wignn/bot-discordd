@@ -136,10 +136,8 @@ impl StockNewsWsClient {
             return;
         }
 
-        // Build embed
         let embed = self.build_stock_embed(data);
         
-        // Send to all channels
         for (channel_id, mention_everyone) in &channels {
             let channel = ChannelId::new(*channel_id as u64);
             
@@ -163,7 +161,6 @@ impl StockNewsWsClient {
             _ => 0x2962FF,  // Default blue
         };
 
-        // Impact bars
         let impact_bar = match data.impact_level.as_deref() {
             Some("high") => "HIGH",
             Some("medium") => "MED",
@@ -171,7 +168,6 @@ impl StockNewsWsClient {
             _ => "-",
         };
 
-        // Category label
         let category_label = match data.category.as_str() {
             "market" => "MARKET",
             "emiten" => "EMITEN",
@@ -180,20 +176,18 @@ impl StockNewsWsClient {
             _ => "SAHAM",
         };
 
-        // Tickers display
         let tickers_str = if !data.tickers.is_empty() {
             format!(" | {}", data.tickers.iter().take(5).cloned().collect::<Vec<_>>().join(", "))
         } else {
             String::new()
         };
 
-        // Time
+        let wib_offset = chrono::FixedOffset::east_opt(7 * 3600).unwrap();
         let time_str = data.published_at.as_ref()
             .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
-            .map(|dt| dt.format("%H:%M WIB").to_string())
+            .map(|dt| dt.with_timezone(&wib_offset).format("%H:%M WIB").to_string())
             .unwrap_or_default();
 
-        // Build embed
         let mut embed = CreateEmbed::new()
             .title(format!("{}{}", category_label, tickers_str))
             .description(&data.title)

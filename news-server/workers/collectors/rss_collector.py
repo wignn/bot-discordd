@@ -122,21 +122,37 @@ class RSSCollector:
     async def fetch_multiple_feeds(
         self,
         urls: list[str],
-        delay: float = 1.0,
+        delay: float = 0.2,  
     ) -> dict[str, list[RSSEntry]]:
-        results = {}
+        semaphore = asyncio.Semaphore(4)  
+        async def fetch_with_limit(url: str) -> tuple[str, list[RSSEntry]]:
+            async with semaphore:
+                entries = await self.fetch_feed(url)
+                if delay > 0:
+                    await asyncio.sleep(delay)
+                return url, entries
         
-        for url in urls:
-            entries = await self.fetch_feed(url)
+        tasks = [fetch_with_limit(url) for url in urls]
+        results_list = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        results = {}
+        for result in results_list:
+            if isinstance(result, Exception):
+                logger.warning("Feed fetch failed", error=str(result))
+                continue
+            url, entries = result
             results[url] = entries
-            
-            if delay > 0:
-                await asyncio.sleep(delay)
-
+        
         return results
 
 
 DEFAULT_FOREX_FEEDS = [
+    {
+        "name": "Thomson Reuters",
+        "url": "https://ir.thomsonreuters.com",
+        "rss_url": "https://ir.thomsonreuters.com/rss/news-releases.xml?items=15",
+        "category": "general",
+    },
     {
         "name": "Reuters - Markets",
         "url": "https://www.reuters.com/markets",

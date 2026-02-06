@@ -1,14 +1,11 @@
-"""
-Stock News Events and WebSocket Handling
-
-Separate event system for Indonesian stock market news.
-"""
-
 from datetime import datetime
 from typing import Any
 from dataclasses import dataclass, asdict
+from zoneinfo import ZoneInfo
 
 from app.core.logging import get_logger
+
+WIB = ZoneInfo("Asia/Jakarta")
 
 
 logger = get_logger(__name__)
@@ -16,7 +13,6 @@ logger = get_logger(__name__)
 
 @dataclass
 class StockNewsEvent:
-    """Stock news event for Indonesian market"""
     id: str
     title: str
     summary: str | None
@@ -63,16 +59,15 @@ class StockNewsEvent:
         }
         category_label = category_labels.get(self.category, "SAHAM")
         
-        # Time formatting
         time_str = ""
         if self.published_at:
             try:
                 dt = datetime.fromisoformat(self.published_at.replace('Z', '+00:00'))
-                time_str = dt.strftime("%H:%M WIB")
+                dt_wib = dt.astimezone(WIB)
+                time_str = dt_wib.strftime("%H:%M WIB")
             except Exception:
                 time_str = ""
         
-        # Tickers display
         tickers_str = ""
         if self.tickers:
             tickers_str = " | " + ", ".join(self.tickers[:5])

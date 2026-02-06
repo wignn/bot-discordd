@@ -45,17 +45,17 @@ celery_app.conf.update(
 celery_app.conf.beat_schedule = {
     "fetch-rss-feeds": {
         "task": "workers.tasks.collection_tasks.fetch_all_rss_feeds",
-        "schedule": crontab(minute="*/5"),
+        "schedule": 20.0,  
     },
     
     "fetch-stock-id-feeds": {
         "task": "workers.tasks.stock_tasks.fetch_stock_id_feeds",
-        "schedule": crontab(minute="*/3"),
+        "schedule": 20.0,  
     },
     
     "process-pending-articles": {
         "task": "workers.tasks.broadcast_tasks.process_pending_articles",
-        "schedule": crontab(minute="*/2"),
+        "schedule": 20.0, 
     },
     
     "websocket-heartbeat": {
@@ -80,7 +80,7 @@ celery_app.conf.beat_schedule = {
     
     "check-calendar-reminders": {
         "task": "workers.tasks.calendar_tasks.check_calendar_reminders",
-        "schedule": crontab(minute="*/5"),
+        "schedule": 20.0,  
     },
 }
 

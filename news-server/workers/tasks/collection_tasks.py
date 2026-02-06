@@ -1,21 +1,26 @@
+import asyncio
+import hashlib
+
 from celery import shared_task
+from sqlalchemy import text
 
 from app.core.logging import get_logger
+from app.db.session import get_sync_db
+from workers.collectors.rss_collector import RSSCollector, DEFAULT_FOREX_FEEDS
 
 
 logger = get_logger(__name__)
 
+_FEED_NAME_MAP = {feed["rss_url"]: feed["name"] for feed in DEFAULT_FOREX_FEEDS}
+
 
 @shared_task(bind=True, max_retries=3)
 def fetch_all_rss_feeds(self):
-    import asyncio
-    from workers.collectors.rss_collector import RSSCollector, DEFAULT_FOREX_FEEDS
-    
     async def _fetch():
         collector = RSSCollector()
         try:
             urls = [feed["rss_url"] for feed in DEFAULT_FOREX_FEEDS]
-            results = await collector.fetch_multiple_feeds(urls, delay=1.0)
+            results = await collector.fetch_multiple_feeds(urls, delay=0.2)
             
             total_entries = sum(len(entries) for entries in results.values())
             logger.info(
@@ -37,9 +42,6 @@ def fetch_all_rss_feeds(self):
 
 @shared_task(bind=True, max_retries=3)
 def fetch_single_feed(self, feed_url: str, source_id: str):
-    import asyncio
-    from workers.collectors.rss_collector import RSSCollector
-    
     async def _fetch():
         collector = RSSCollector()
         try:
@@ -57,18 +59,13 @@ def fetch_single_feed(self, feed_url: str, source_id: str):
 
 @shared_task(bind=True)
 def process_rss_entry(self, entry_data: dict, feed_url: str, source_id: str = None):
-    import hashlib
-    from sqlalchemy import text
-    from app.db.session import get_sync_db
     from workers.tasks.scraping_tasks import scrape_article
-    from workers.tasks.broadcast_tasks import broadcast_article  # Direct broadcast, no AI
+    from workers.tasks.broadcast_tasks import broadcast_article
     
-    # Generate content hash for deduplication
     url = entry_data.get("link", "")
     title = entry_data.get("title", "")
     content_hash = hashlib.sha256(f"{url}{title}".encode()).hexdigest()
     
-    # Check if already processed (using sync session for Celery workers)
     try:
         with get_sync_db() as session:
             result = session.execute(
@@ -76,16 +73,11 @@ def process_rss_entry(self, entry_data: dict, feed_url: str, source_id: str = No
                 {"hash": content_hash}
             )
             if result.scalar() is not None:
-                logger.debug("Article already exists, skipping", url=url[:50])
                 return {"status": "skipped", "reason": "duplicate", "url": url}
     except Exception as e:
         logger.warning("Failed to check duplicate, processing anyway", error=str(e))
     
-    logger.info(
-        "Processing RSS entry",
-        title=title[:50],
-        url=url,
-    )
+    logger.info("Processing RSS entry", title=title[:50], url=url)
     
     content = entry_data.get("content", "")
     description = entry_data.get("summary", "") or entry_data.get("description", "")
@@ -93,15 +85,8 @@ def process_rss_entry(self, entry_data: dict, feed_url: str, source_id: str = No
     if len(content) < 200:
         scrape_article.delay(url, entry_data)
     else:
-        # Get source name from feed URL
-        from workers.collectors.rss_collector import DEFAULT_FOREX_FEEDS
-        source_name = "Unknown"
-        for feed in DEFAULT_FOREX_FEEDS:
-            if feed.get("rss_url") == feed_url:
-                source_name = feed.get("name", "Unknown")
-                break
+        source_name = _FEED_NAME_MAP.get(feed_url, "Unknown")
         
-        # Direct broadcast without AI processing (cost saving)
         broadcast_article.delay({
             "title": title,
             "content": content,

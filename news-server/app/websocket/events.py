@@ -1,9 +1,13 @@
 from datetime import datetime
 from typing import Any
 from dataclasses import dataclass, asdict
+from zoneinfo import ZoneInfo
 
 from app.websocket.manager import ws_manager, EventType
 from app.core.logging import get_logger
+
+# WIB timezone (UTC+7)
+WIB = ZoneInfo("Asia/Jakarta")
 
 
 logger = get_logger(__name__)
@@ -55,13 +59,12 @@ class NewsEvent:
         time_str = ""
         if self.published_at:
             try:
-                from datetime import datetime
                 dt = datetime.fromisoformat(self.published_at.replace('Z', '+00:00'))
-                time_str = dt.strftime("%H:%M WIB")
+                dt_wib = dt.astimezone(WIB)
+                time_str = dt_wib.strftime("%H:%M WIB")
             except:
                 time_str = "N/A"
         
-        # Use Indonesian summary if available, otherwise fall back to English
         display_summary = self.summary_id or self.summary
         description_parts = [
             f"**{category}**",
@@ -92,13 +95,12 @@ class NewsEvent:
         footer_date = ""
         if self.published_at:
             try:
-                from datetime import datetime
                 dt = datetime.fromisoformat(self.published_at.replace('Z', '+00:00'))
-                footer_date = dt.strftime("%d/%m/%Y %H:%M")
+                dt_wib = dt.astimezone(WIB)
+                footer_date = dt_wib.strftime("%d/%m/%Y %H:%M")
             except:
                 footer_date = ""
         
-        # Use Indonesian title if available
         display_title = self.title_id or self.title
         
         return {
@@ -238,7 +240,8 @@ class StockNewsEvent:
         if self.published_at:
             try:
                 dt = datetime.fromisoformat(self.published_at.replace('Z', '+00:00'))
-                time_str = dt.strftime("%H:%M WIB")
+                dt_wib = dt.astimezone(WIB)
+                time_str = dt_wib.strftime("%H:%M WIB")
             except:
                 time_str = "N/A"
         
