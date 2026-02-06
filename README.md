@@ -159,12 +159,10 @@ forex/
     │   │   ├── admin.rs
     │   │   ├── ai.rs
     │   │   ├── calendar.rs
-    │   │   ├── chart.rs
     │   │   ├── forex.rs
     │   │   ├── general.rs
     │   │   ├── moderation.rs
     │   │   ├── music.rs
-    │   │   ├── price.rs
     │   │   └── stock.rs
     │   ├── handlers/
     │   ├── repository/
@@ -174,7 +172,6 @@ forex/
     │   │   └── stock.rs
     │   └── services/
     │       ├── news_ws.rs
-    │       ├── tiingo.rs
     │       └── music/
     │
     ├── migrations/
@@ -223,7 +220,6 @@ forex/
 - Music playback with queue management
 - AI chat integration (Gemini)
 - Moderation tools (warn, kick, ban, timeout)
-- Forex price lookups and charts
 - Stock news notifications
 
 ### Discord Commands
@@ -241,8 +237,6 @@ forex/
 | `/calendar_status` | Check calendar status |
 | `/calendar_mention true/false` | Toggle @everyone for events |
 | `/stocknews #channel` | Setup stock news notifications |
-| `/price SYMBOL` | Get current forex price |
-| `/chart SYMBOL` | Get forex chart |
 
 ### Translation Endpoint
 
@@ -305,7 +299,6 @@ docker compose exec discord-bot sqlx migrate run
 DISCORD_TOKEN=your_discord_bot_token
 DATABASE_URL=postgres://postgres:postgres@postgres:5432/forex
 NEWS_WS_URL=ws://news-api:8000
-FOREX_SERVICE_URL=http://news-api:8000
 LAVALINK_HOST=lavalink
 LAVALINK_PORT=2333
 LAVALINK_PASSWORD=youshallnotpass

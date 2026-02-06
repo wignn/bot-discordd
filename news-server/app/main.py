@@ -21,28 +21,7 @@ async def lifespan(app: FastAPI):
         environment=settings.app_env,
     )
     
-    # Start Forex Service
-    if settings.forex_enabled and settings.tiingo_api_key:
-        from app.forex.service import ForexService
-        from app.forex.websocket import get_forex_ws_manager
-        
-        forex_service = ForexService.init_instance(settings.tiingo_api_key)
-        await forex_service.start()
-        
-        # Register WebSocket manager
-        ws_manager = get_forex_ws_manager()
-        await ws_manager.register_with_service()
-        
-        logger.info("Forex Service started")
-    
     yield
-    
-    # Stop Forex Service
-    if settings.forex_enabled:
-        from app.forex.service import get_forex_service
-        service = get_forex_service()
-        if service:
-            await service.stop()
     
     logger.info("Shutting down News Intelligence API")
 
@@ -99,26 +78,7 @@ def create_app() -> FastAPI:
             "health": "/health",
         }
 
-    @app.websocket("/ws/forex")
-    async def forex_websocket(websocket: WebSocket, client_id: str = "unknown", client_type: str = "unknown"):
-        from app.forex.websocket import get_forex_ws_manager
-        import uuid
-        
-        if client_id == "unknown":
-            client_id = str(uuid.uuid4())[:8]
-        
-        manager = get_forex_ws_manager()
-        await manager.connect(websocket, client_id, client_type)
-        
-        try:
-            while True:
-                data = await websocket.receive_json()
-                await manager.handle_message(client_id, data)
-        except WebSocketDisconnect:
-            await manager.disconnect(client_id)
-        except Exception as e:
-            logger.error("Forex WebSocket error", error=str(e))
-            await manager.disconnect(client_id)
+
 
     return app
 

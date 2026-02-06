@@ -1,13 +1,13 @@
 pub mod admin;
 pub mod ai;
 pub mod calendar;
-pub mod chart;
+
 pub mod forex;
 pub mod general;
 pub mod moderation;
 pub mod music;
 pub mod ping;
-pub mod price;
+
 pub mod stock;
 
 pub mod sys;

@@ -6,20 +6,21 @@ const WS_URL = import.meta.env.VITE_WS_URL || '';
 
 // Custom hook for WebSocket connection to news feed
 export function useNewsWebSocket() {
-    const [news, setNews] = useState([]);
+    const [forexNews, setForexNews] = useState([]);
+    const [stockNews, setStockNews] = useState([]);
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState(null);
     const wsRef = useRef(null);
     const reconnectTimeoutRef = useRef(null);
 
-    // Fetch initial news via REST API
+    // Fetch initial forex news via REST API
     const fetchLatestNews = useCallback(async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/api/v1/news/latest?limit=10`);
             if (response.ok) {
                 const data = await response.json();
                 if (data.items && data.items.length > 0) {
-                    setNews(data.items.map(item => ({
+                    setForexNews(data.items.map(item => ({
                         id: item.id,
                         title: item.translated_title || item.original_title,
                         summary: item.summary,
@@ -32,7 +33,32 @@ export function useNewsWebSocket() {
                 }
             }
         } catch (e) {
-            console.error('Failed to fetch news:', e);
+            console.error('Failed to fetch forex news:', e);
+        }
+    }, []);
+
+    // Fetch initial stock news via REST API
+    const fetchLatestStockNews = useCallback(async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/v1/stock/latest?limit=10`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.items && data.items.length > 0) {
+                    setStockNews(data.items.map(item => ({
+                        id: item.id || item.content_hash,
+                        title: item.title,
+                        summary: item.summary,
+                        source: item.source_name,
+                        timestamp: item.published_at || item.processed_at,
+                        sentiment: item.sentiment,
+                        impact: item.impact_level,
+                        tickers: item.tickers ? item.tickers.split(',') : [],
+                        category: item.category
+                    })));
+                }
+            }
+        } catch (e) {
+            console.error('Failed to fetch stock news:', e);
         }
     }, []);
 
@@ -40,7 +66,11 @@ export function useNewsWebSocket() {
         if (!WS_URL) {
             // Fallback to REST polling if no WebSocket URL
             fetchLatestNews();
-            const interval = setInterval(fetchLatestNews, 30000);
+            fetchLatestStockNews();
+            const interval = setInterval(() => {
+                fetchLatestNews();
+                fetchLatestStockNews();
+            }, 30000);
             return () => clearInterval(interval);
         }
 
@@ -52,23 +82,46 @@ export function useNewsWebSocket() {
                 setIsConnected(true);
                 setError(null);
                 fetchLatestNews();
+                fetchLatestStockNews();
             };
 
             wsRef.current.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    if (data.type === 'news.new' || data.type === 'news.high_impact') {
-                        const article = data.data;
-                        setNews(prev => [{
-                            id: article.id,
-                            title: article.translated_title || article.original_title,
-                            summary: article.summary,
-                            source: article.source_name,
-                            timestamp: article.published_at,
-                            sentiment: article.sentiment,
-                            impact: article.impact_level,
-                            pairs: article.currency_pairs || []
-                        }, ...prev].slice(0, 10));
+                    const eventType = data.event || data.type;
+
+                    if (eventType === 'news.new' || eventType === 'news.high_impact') {
+                        const article = data.data?.article || data.data;
+                        if (article) {
+                            setForexNews(prev => [{
+                                id: article.id,
+                                title: article.title_id || article.title,
+                                summary: article.summary_id || article.summary,
+                                source: article.source_name,
+                                timestamp: article.published_at || article.processed_at,
+                                sentiment: article.sentiment,
+                                impact: article.impact_level,
+                                pairs: article.currency_pairs || []
+                            }, ...prev].slice(0, 15));
+                        }
+                    }
+
+                    // Handle stock news
+                    if (eventType === 'stock.news.new' || eventType === 'stock.news.high_impact') {
+                        const article = data.data?.article || data.data;
+                        if (article) {
+                            setStockNews(prev => [{
+                                id: article.id,
+                                title: article.title,
+                                summary: article.summary,
+                                source: article.source_name,
+                                timestamp: article.published_at || article.processed_at,
+                                sentiment: article.sentiment,
+                                impact: article.impact_level,
+                                tickers: article.tickers || [],
+                                category: article.category
+                            }, ...prev].slice(0, 15));
+                        }
                     }
                 } catch (e) {
                     console.error('Failed to parse message:', e);
@@ -87,8 +140,9 @@ export function useNewsWebSocket() {
         } catch (e) {
             setError('Failed to connect');
             fetchLatestNews();
+            fetchLatestStockNews();
         }
-    }, [fetchLatestNews]);
+    }, [fetchLatestNews, fetchLatestStockNews]);
 
     useEffect(() => {
         connect();
@@ -103,62 +157,8 @@ export function useNewsWebSocket() {
         };
     }, [connect]);
 
-    return { news, isConnected, error };
-}
+    // Combined news for backward compatibility
+    const news = forexNews;
 
-// Custom hook for live price from Forex service
-export function useLivePrice() {
-    const [prices, setPrices] = useState({
-        xauusd: null,
-        eurusd: null,
-        gbpusd: null,
-    });
-    const [lastUpdate, setLastUpdate] = useState(new Date());
-    const [isLoading, setIsLoading] = useState(true);
-
-    const fetchPrices = useCallback(async () => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/v1/forex/prices`);
-            if (response.ok) {
-                const data = await response.json();
-
-                // Transform API response to our format
-                const priceMap = {};
-                if (data.prices && Array.isArray(data.prices)) {
-                    data.prices.forEach(p => {
-                        const symbol = p.symbol.toLowerCase();
-                        priceMap[symbol] = {
-                            bid: p.bid,
-                            ask: p.ask,
-                            mid: p.mid,
-                            spread: p.spread,
-                            spreadPips: p.spread_pips,
-                            change: 0, // API doesn't provide change yet
-                            changePercent: 0,
-                        };
-                    });
-                }
-
-                setPrices(prev => ({
-                    xauusd: priceMap.xauusd || prev.xauusd,
-                    eurusd: priceMap.eurusd || prev.eurusd,
-                    gbpusd: priceMap.gbpusd || prev.gbpusd,
-                }));
-                setLastUpdate(new Date());
-                setIsLoading(false);
-            }
-        } catch (e) {
-            console.error('Failed to fetch prices:', e);
-            // Keep trying but don't overwrite existing data
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchPrices();
-        const interval = setInterval(fetchPrices, 5000);
-        return () => clearInterval(interval);
-    }, [fetchPrices]);
-
-    return { prices, lastUpdate, isLoading };
+    return { news, forexNews, stockNews, isConnected, error };
 }

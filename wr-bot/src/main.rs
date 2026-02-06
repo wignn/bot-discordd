@@ -7,9 +7,8 @@ use serenity::all::{ActivityData, GatewayIntents, OnlineStatus};
 use songbird::SerenityInit;
 use std::collections::HashSet;
 use std::env;
-use std::sync::Arc;
 use worm::commands::{
-    Data, admin, ai, calendar, chart, forex, general, moderation, music, ping, price, stock, sys,
+    Data, admin, ai, calendar, forex, general, moderation, music, ping, stock, sys,
 };
 use worm::config::Config;
 use worm::error::BotError;
@@ -17,7 +16,6 @@ use worm::handlers::{handle_event, handle_track_end, on_error};
 use worm::repository::create_pool;
 use worm::services::music::MusicPlayer;
 use worm::services::news_ws::start_news_ws_service;
-use worm::services::tiingo::TiingoService;
 
 #[tokio::main]
 async fn main() -> Result<(), BotError> {
@@ -138,19 +136,6 @@ async fn main() -> Result<(), BotError> {
                 calendar::calendar_enable(),
                 calendar::calendar_status(),
                 calendar::calendar_mention(),
-                // Price commands
-                price::price(),
-                price::alert(),
-                price::alerts(),
-                price::alertremove(),
-                // Chart commands (Python service)
-                chart::fprice(),
-                chart::chart(),
-                chart::compare(),
-                chart::analysis(),
-                chart::falert(),
-                chart::falerts(),
-                chart::falertremove(),
                 // Stock news commands
                 stock::stocknews(),
                 stock::search(),
@@ -212,34 +197,6 @@ async fn main() -> Result<(), BotError> {
                     println!("[OK] YouTube search service initialized");
                 } else {
                     println!("[WARN] YouTube search not available (no YOUTUBE_API_KEY)");
-                }
-
-                if let Ok(tiingo_key) = env::var("TIINGO_API_KEY") {
-                    let tiingo = Arc::new(TiingoService::new(tiingo_key));
-                    worm::services::tiingo::init_global_tiingo(tiingo.clone());
-
-                    let http_for_tiingo = ctx.http.clone();
-                    tokio::spawn(async move {
-                        tiingo.start_price_polling(http_for_tiingo).await;
-                    });
-                    println!("[OK] Tiingo price service initialized (direct connection)");
-                } else {
-                    println!("[WARN] Tiingo not available (no TIINGO_API_KEY)");
-                }
-
-                if let Ok(forex_service_url) = env::var("FOREX_SERVICE_URL") {
-                    let http_for_forex = ctx.http.clone();
-                    worm::services::init_forex_clients(&forex_service_url, http_for_forex);
-
-                    tokio::spawn(async move {
-                        worm::services::start_forex_ws().await;
-                    });
-                    println!(
-                        "[OK] Python Forex Service client initialized ({})",
-                        forex_service_url
-                    );
-                } else {
-                    println!("[WARN] Python Forex Service not configured (no FOREX_SERVICE_URL)");
                 }
 
                 Ok(Data {
