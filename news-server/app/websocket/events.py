@@ -300,8 +300,6 @@ class StockNewsEvent:
 
 
 async def broadcast_stock_article(article_data: dict) -> int:
-    from app.stock.ws_manager import get_stock_ws_manager
-    
     event = StockNewsEvent(
         id=article_data.get("id", ""),
         title=article_data.get("original_title") or article_data.get("title", ""),
@@ -316,15 +314,6 @@ async def broadcast_stock_article(article_data: dict) -> int:
         impact_level=article_data.get("impact_level"),
         published_at=article_data.get("published_at"),
         processed_at=datetime.utcnow().isoformat(),
-    )
-    
-    is_high_impact = event.impact_level == "high" or (event.tickers and len(event.tickers) >= 3)
-    stock_event_type = "stock.high_impact" if is_high_impact else "stock.new"
-    
-    stock_ws = get_stock_ws_manager()
-    await stock_ws.broadcast(
-        channel=stock_event_type,
-        data=event.to_dict(),
     )
     
     count = await ws_manager.broadcast(
