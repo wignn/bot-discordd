@@ -174,28 +174,28 @@ services:
     networks:
       - forex-network
 
-  lavalink:
-    image: ghcr.io/lavalink-devs/lavalink:4
-    container_name: lavalink
-    restart: unless-stopped
-    user: "0:0"
-    volumes:
-      - ./wr-bot/lavalink/application.yml:/opt/Lavalink/application.yml
-      - ./wr-bot/lavalink/plugins:/opt/Lavalink/plugins
-    env_file:
-      - ./wr-bot/.env
-    environment:
-      - _JAVA_OPTIONS=-Xmx512M -Djava.net.preferIPv4Stack=true
-      - SERVER_PORT=2333
-    ports:
-      - "2333:2333"
-    networks:
-      - forex-network
-    healthcheck:
-      test: [ "CMD", "curl", "-sf", "-H", "Authorization: youshallnotpass", "http://localhost:2333/version" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+  # lavalink:
+  #   image: ghcr.io/lavalink-devs/lavalink:4
+  #   container_name: lavalink
+  #   restart: unless-stopped
+  #   user: "0:0"
+  #   volumes:
+  #     - ./wr-bot/lavalink/application.yml:/opt/Lavalink/application.yml
+  #     - ./wr-bot/lavalink/plugins:/opt/Lavalink/plugins
+  #   env_file:
+  #     - ./wr-bot/.env
+  #   environment:
+  #     - _JAVA_OPTIONS=-Xmx512M -Djava.net.preferIPv4Stack=true
+  #     - SERVER_PORT=2333
+  #   ports:
+  #     - "2333:2333"
+  #   networks:
+  #     - forex-network
+  #   healthcheck:
+  #     test: [ "CMD", "curl", "-sf", "-H", "Authorization: youshallnotpass", "http://localhost:2333/version" ]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
 
   pgweb:
     image: sosedoff/pgweb:latest
