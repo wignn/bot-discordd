@@ -53,7 +53,12 @@ plugins:
     clients:
       - MUSIC
       - WEB
+      - ANDROID_VR
       - TVHTML5EMBEDDED
+
+    pot:
+      token:  ${PO_TOKEN:}
+
   lavasrc:
     providers:
       - "ytsearch:\"%ISRC%\""
