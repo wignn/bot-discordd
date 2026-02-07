@@ -167,8 +167,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      lavalink:
-        condition: service_started
+      # lavalink:
+      #   condition: service_started
       news-api:
         condition: service_started
     networks:
