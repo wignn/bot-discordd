@@ -62,6 +62,9 @@ async fn main() -> Result<(), BotError> {
         .unwrap_or(2333);
     let lavalink_password =
         env::var("LAVALINK_PASSWORD").unwrap_or_else(|_| "youshallnotpass".to_string());
+    let lavalink_is_ssl = env::var("IS_SSL")
+        .map(|v| v.trim().to_lowercase() == "true")
+        .unwrap_or(false);
     let owners_clone = owners.clone();
     let db_for_checker = db.clone();
     let db_for_setup = db.clone();
@@ -158,6 +161,7 @@ async fn main() -> Result<(), BotError> {
 
             let lavalink_host = lavalink_host.clone();
             let lavalink_password = lavalink_password.clone();
+            let lavalink_is_ssl = lavalink_is_ssl;
 
             Box::pin(async move {
                 println!("[OK] Logged in as {}", ready.user.name);
@@ -173,6 +177,7 @@ async fn main() -> Result<(), BotError> {
                     lavalink_port,
                     &lavalink_password,
                     user_id.get(),
+                    lavalink_is_ssl,
                 )
                 .await
                 {
@@ -329,6 +334,7 @@ async fn initialize_lavalink(
     port: u16,
     password: &str,
     user_id: u64,
+    is_ssl: bool,
 ) -> Result<LavalinkClient, String> {
     let events = Events {
         track_end: Some(|client, _session_id, event| Box::pin(handle_track_end(client, event))),
@@ -340,7 +346,7 @@ async fn initialize_lavalink(
         password: password.to_string(),
         user_id: user_id.into(),
         session_id: None,
-        is_ssl: false,
+        is_ssl,
         events: events.clone().into(),
     };
 
