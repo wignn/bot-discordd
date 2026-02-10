@@ -38,9 +38,7 @@ def pretty_print(data, max_items=5):
         print(data.text[:500])
 
 def test_endpoint(name, func):
-    print(f"\n{Colors.BLUE}{'='*60}{Colors.END}")
     print(f"{Colors.BLUE}{name}{Colors.END}")
-    print(f"{Colors.BLUE}{'='*60}{Colors.END}")
     
     try:
         return func()
