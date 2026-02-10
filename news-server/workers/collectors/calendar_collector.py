@@ -2,6 +2,7 @@ import httpx
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo
+from typing import ClassVar
 
 from app.core.logging import get_logger
 from app.core.config import settings
@@ -12,6 +13,8 @@ logger = get_logger(__name__)
 FOREX_FACTORY_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 
 WIB = ZoneInfo("Asia/Jakarta")
+
+CALENDAR_CACHE_TTL = timedelta(hours=2)
 
 
 @dataclass
@@ -47,6 +50,9 @@ class CalendarEvent:
 
 
 class CalendarCollector:
+    # Class-level cache shared across instances (within same process)
+    _cache: ClassVar[list["CalendarEvent"]] = []
+    _cache_time: ClassVar[datetime | None] = None
 
     def __init__(self):
         self.client = httpx.AsyncClient(
@@ -57,7 +63,18 @@ class CalendarCollector:
     async def close(self):
         await self.client.aclose()
 
-    async def fetch_events(self) -> list[CalendarEvent]:
+    def _is_cache_valid(self) -> bool:
+        if not CalendarCollector._cache or CalendarCollector._cache_time is None:
+            return False
+        age = datetime.now(timezone.utc) - CalendarCollector._cache_time
+        return age < CALENDAR_CACHE_TTL
+
+    async def fetch_events(self, force_refresh: bool = False) -> list[CalendarEvent]:
+        # Return cached data if valid and not forcing refresh
+        if not force_refresh and self._is_cache_valid():
+            logger.debug("Using cached calendar events", count=len(CalendarCollector._cache))
+            return CalendarCollector._cache
+
         try:
             response = await self.client.get(FOREX_FACTORY_URL)
             response.raise_for_status()
@@ -70,14 +87,25 @@ class CalendarCollector:
                 if event:
                     events.append(event)
 
-            logger.info("Fetched calendar events", count=len(events))
+            # Update cache
+            CalendarCollector._cache = events
+            CalendarCollector._cache_time = datetime.now(timezone.utc)
+
+            logger.info("Fetched and cached calendar events", count=len(events))
             return events
 
         except httpx.HTTPError as e:
             logger.error("HTTP error fetching calendar", error=str(e))
+            # Return stale cache if available
+            if CalendarCollector._cache:
+                logger.warning("Returning stale cache due to fetch error")
+                return CalendarCollector._cache
             return []
         except Exception as e:
             logger.error("Error fetching calendar", error=str(e))
+            if CalendarCollector._cache:
+                return CalendarCollector._cache
+            return []
             return []
 
     def _parse_event(self, item: dict) -> CalendarEvent | None:

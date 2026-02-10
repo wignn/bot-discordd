@@ -80,7 +80,7 @@ celery_app.conf.beat_schedule = {
     
     "check-calendar-reminders": {
         "task": "workers.tasks.calendar_tasks.check_calendar_reminders",
-        "schedule": 20.0,  
+        "schedule": 60.0, 
     },
 }
 
