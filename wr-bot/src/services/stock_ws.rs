@@ -14,8 +14,10 @@ pub struct StockNewsData {
     pub content: Option<String>,
     pub source_name: String,
     pub source_url: String,
-    pub original_url: String,
-    pub category: String,
+    #[serde(alias = "url")]
+    pub original_url: Option<String>,
+    pub category: Option<String>,
+    #[serde(default)]
     pub tickers: Vec<String>,
     pub sentiment: Option<String>,
     pub impact_level: Option<String>,
@@ -24,9 +26,16 @@ pub struct StockNewsData {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct StockEventData {
+    pub article: StockNewsData,
+    pub discord_embed: Option<serde_json::Value>,
+    pub asset_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct StockNewsEvent {
     pub event: String,
-    pub data: StockNewsData,
+    pub data: StockEventData,
 }
 
 pub struct StockNewsWsClient {
@@ -108,10 +117,10 @@ impl StockNewsWsClient {
     async fn handle_message(&self, text: &str) {
         if let Ok(event) = serde_json::from_str::<StockNewsEvent>(text) {
             match event.event.as_str() {
-                "stock.new" | "stock.high_impact" => {
-                    println!("[STOCK-WS] Received stock news: {}", event.data.title);
+                "stock.news.new" | "stock.news.high_impact" => {
+                    println!("[STOCK-WS] Received stock news: {}", event.data.article.title);
                     if let (Some(http), Some(pool)) = (&self.http, &self.db_pool) {
-                        self.broadcast_stock_news(&event.data, event.event.as_str(), http, pool).await;
+                        self.broadcast_stock_news(&event.data.article, event.event.as_str(), http, pool).await;
                     }
                 }
                 _ => {}
@@ -143,7 +152,7 @@ impl StockNewsWsClient {
             
             let mut message = CreateMessage::new().embed(embed.clone());
             
-            if event_type == "stock.high_impact" && *mention_everyone {
+            if event_type == "stock.news.high_impact" && *mention_everyone {
                 message = message.content("@everyone **HIGH IMPACT STOCK NEWS**");
             }
             
@@ -168,11 +177,11 @@ impl StockNewsWsClient {
             _ => "-",
         };
 
-        let category_label = match data.category.as_str() {
-            "market" => "MARKET",
-            "emiten" => "EMITEN",
-            "idx" => "IDX",
-            "corporate" => "CORPORATE",
+        let category_label = match data.category.as_deref() {
+            Some("market") => "MARKET",
+            Some("emiten") => "EMITEN",
+            Some("idx") => "IDX",
+            Some("corporate") => "CORPORATE",
             _ => "SAHAM",
         };
 
@@ -202,7 +211,8 @@ impl StockNewsWsClient {
             .field("Waktu", if time_str.is_empty() { "N/A" } else { &time_str }, true)
             .field("Impact", impact_bar, true);
 
-        embed = embed.field("Sumber", format!("[Baca Selengkapnya]({})", data.original_url), false);
+        let url = data.original_url.as_deref().unwrap_or(&data.source_url);
+        embed = embed.field("Sumber", format!("[Baca Selengkapnya]({})", url), false);
 
         embed
     }
