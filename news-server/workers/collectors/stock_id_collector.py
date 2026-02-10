@@ -118,6 +118,12 @@ class StockIDCollector:
             follow_redirects=True,
         )
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
+
     async def close(self):
         await self.client.aclose()
 
@@ -127,10 +133,7 @@ class StockIDCollector:
         category = feed_info["category"]
         
         try:
-            response = await asyncio.wait_for(
-                self.client.get(url),
-                timeout=20.0
-            )
+            response = await self.client.get(url)
             response.raise_for_status()
             
             loop = asyncio.get_running_loop()
@@ -156,8 +159,8 @@ class StockIDCollector:
         except httpx.HTTPError as e:
             logger.error("HTTP error fetching stock feed", url=url, error=str(e))
             return []
-        except asyncio.TimeoutError:
-            logger.error("Timeout fetching stock feed", url=url)
+        except httpx.TimeoutException as e:
+            logger.error("Timeout fetching stock feed", url=url, error=str(e))
             return []
         except Exception as e:
             logger.error("Error fetching stock feed", url=url, error=str(e))
@@ -244,7 +247,6 @@ class StockIDCollector:
         async def fetch_with_limit(feed_info: dict) -> tuple[str, list[StockNewsEntry]]:
             async with self._semaphore:  # Use class-level semaphore
                 entries = await self.fetch_feed(feed_info)
-            # Sleep OUTSIDE semaphore to not block other requests
             if delay > 0:
                 await asyncio.sleep(delay)
             return feed_info["name"], entries

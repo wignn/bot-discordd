@@ -39,15 +39,18 @@ class RSSCollector:
             follow_redirects=True,
         )
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
+
     async def close(self):
         await self.client.aclose()
 
     async def fetch_feed(self, url: str) -> list[RSSEntry]:
         try:
-            response = await asyncio.wait_for(
-                self.client.get(url),
-                timeout=20.0
-            )
+            response = await self.client.get(url)
             response.raise_for_status()
             
             loop = asyncio.get_running_loop()
@@ -73,8 +76,8 @@ class RSSCollector:
         except httpx.HTTPError as e:
             logger.error("HTTP error fetching feed", url=url, error=str(e))
             return []
-        except asyncio.TimeoutError:
-            logger.error("Timeout fetching feed", url=url)
+        except httpx.TimeoutException as e:
+            logger.error("Timeout fetching feed", url=url, error=str(e))
             return []
         except Exception as e:
             logger.error("Error fetching feed", url=url, error=str(e))
