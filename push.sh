@@ -1,11 +1,9 @@
 #!/bin/bash
-
 set -e
 
+NEWS_SERVER="wign/news-server"
 BOT_IMAGE="wign/bot-discord"
-NEWS_API_IMAGE="wign/news-server"
-NEWS_WORKER_IMAGE="wign/news-worker"
-FOREX_FRONTEND="wign/forex-frontend"
+FRONTEND="wign/forex-frontend"
 TAG="${1:-latest}"
 
 echo "================================"
@@ -14,12 +12,21 @@ echo "Tag: $TAG"
 echo "================================"
 
 echo ""
-echo "[1/5] Setting up Docker buildx..."
+echo "[1/4] Setting up Docker buildx..."
 docker buildx create --name multibuilder --driver docker-container --use 2>/dev/null || true
 docker buildx inspect --bootstrap
 
 echo ""
-echo "[2/5] Building and pushing Discord Bot..."
+echo "[2/4] Building and pushing News Server..."
+docker buildx build \
+    --platform linux/amd64 \
+    -f infrastructure/docker/Dockerfile.server \
+    -t $NEWS_SERVER:$TAG \
+    --push \
+    ./news-server
+
+echo ""
+echo "[3/4] Building and pushing Discord Bot..."
 docker buildx build \
     --platform linux/amd64 \
     -f infrastructure/docker/Dockerfile.bot \
@@ -28,41 +35,22 @@ docker buildx build \
     ./wr-bot
 
 echo ""
-echo "[3/5] Building and pushing News API..."
-docker buildx build \
-    --platform linux/amd64 \
-    -f infrastructure/docker/Dockerfile.api \
-    -t $NEWS_API_IMAGE:$TAG \
-    --push \
-    ./news-server
-
-echo ""
-echo "[4/5] Building and pushing News Worker..."
-docker buildx build \
-    --platform linux/amd64 \
-    -f infrastructure/docker/Dockerfile.worker \
-    -t $NEWS_WORKER_IMAGE:$TAG \
-    --push \
-    ./news-server
-
-echo ""
-echo "[5/5] Building and pushing frontend..."
+echo "[4/4] Building and pushing Frontend..."
 docker buildx build \
     --platform linux/amd64 \
     -f infrastructure/docker/Dockerfile.frontend \
-    -t $FOREX_FRONTEND:$TAG \
+    -t $FRONTEND:$TAG \
     --push \
-    ./news-server
+    ./frontend
 
 echo ""
 echo "================================"
-echo "All images pushed successfully!"
+echo "All images pushed!"
 echo ""
 echo "Images:"
+echo "  - $NEWS_SERVER:$TAG"
 echo "  - $BOT_IMAGE:$TAG"
-echo "  - $NEWS_API_IMAGE:$TAG"
-echo "  - $NEWS_WORKER_IMAGE:$TAG"
-echo "  - $FOREX_FRONTEND:$TAG"
+echo "  - $FRONTEND:$TAG"
 echo ""
 echo "On your server, run:"
 echo "  docker compose pull"
