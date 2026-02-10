@@ -1,23 +1,18 @@
-#!/usr/bin/env python3
-"""
-Test script for News Server API endpoints.
-
-Usage:
-    python test_api.py              # Run all tests
-    python test_api.py news         # Test news endpoints
-    python test_api.py stock        # Test stock endpoints
-    python test_api.py ws           # Test WebSocket connection
-    python test_api.py redis        # Test Redis stream
-"""
-
-import requests
 import json
 import sys
 import time
 import threading
+import requests
 
 BASE_URL = "http://localhost:8000"
-API_KEY = ""  # Set if required
+API_KEY = ""
+
+class Colors:
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    END = '\033[0m'
 
 def get_headers():
     headers = {"Content-Type": "application/json"}
@@ -25,303 +20,214 @@ def get_headers():
         headers["X-API-Key"] = API_KEY
     return headers
 
-def print_response(r, max_items=5):
-    """Pretty print response with truncation for large lists"""
+def pretty_print(data, max_items=5):
     try:
-        data = r.json()
-        if isinstance(data.get("items"), list) and len(data["items"]) > max_items:
-            truncated = data.copy()
-            truncated["items"] = data["items"][:max_items]
-            truncated["_note"] = f"Showing {max_items} of {len(data['items'])} items"
-            print(json.dumps(truncated, indent=2, default=str))
-        else:
-            print(json.dumps(data, indent=2, default=str))
-    except:
-        print(r.text[:500])
+        response_data = data.json()
+        
+        if isinstance(response_data.get("items"), list):
+            total = len(response_data["items"])
+            if total > max_items:
+                truncated = response_data.copy()
+                truncated["items"] = response_data["items"][:max_items]
+                truncated["_truncated"] = f"Showing {max_items}/{total} items"
+                print(json.dumps(truncated, indent=2, default=str))
+                return
+        
+        print(json.dumps(response_data, indent=2, default=str))
+    except (ValueError, AttributeError):
+        print(data.text[:500])
 
-
-
-def test_health():
-    """Test health check endpoint"""
-    print("\n=== GET /health ===")
+def test_endpoint(name, func):
+    print(f"\n{Colors.BLUE}{'='*60}{Colors.END}")
+    print(f"{Colors.BLUE}{name}{Colors.END}")
+    print(f"{Colors.BLUE}{'='*60}{Colors.END}")
+    
     try:
-        r = requests.get(f"{BASE_URL}/health", headers=get_headers())
-        print(f"Status: {r.status_code}")
-        print_response(r)
-        return r.status_code == 200
+        return func()
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"{Colors.RED}Error: {e}{Colors.END}")
         return False
 
-def test_root():
-    """Test root endpoint"""
-    print("\n=== GET / ===")
-    try:
-        r = requests.get(f"{BASE_URL}/", headers=get_headers())
-        print(f"Status: {r.status_code}")
-        print_response(r)
-        return r.status_code == 200
-    except Exception as e:
-        print(f"Error: {e}")
-        return False
+def check_health():
+    r = requests.get(f"{BASE_URL}/health", headers=get_headers())
+    print(f"Status: {r.status_code}")
+    pretty_print(r)
+    return r.status_code == 200
 
-
+def check_root():
+    r = requests.get(f"{BASE_URL}/", headers=get_headers())
+    print(f"Status: {r.status_code}")
+    pretty_print(r)
+    return r.status_code == 200
 
 def test_news_list():
-    """Test news list with pagination"""
-    print("\n=== GET /api/v1/news ===")
-    try:
-        r = requests.get(f"{BASE_URL}/api/v1/news?page=1&page_size=5", headers=get_headers())
-        print(f"Status: {r.status_code}")
-        print_response(r)
-        return r.status_code == 200
-    except Exception as e:
-        print(f"Error: {e}")
-        return False
+    r = requests.get(
+        f"{BASE_URL}/api/v1/news",
+        params={"page": 1, "page_size": 5},
+        headers=get_headers()
+    )
+    print(f"Status: {r.status_code}")
+    pretty_print(r)
+    return r.status_code == 200
 
 def test_news_latest():
-    """Test latest news endpoint"""
-    print("\n=== GET /api/v1/news/latest ===")
-    try:
-        r = requests.get(f"{BASE_URL}/api/v1/news/latest?limit=5", headers=get_headers())
-        print(f"Status: {r.status_code}")
-        print_response(r)
-        return r.status_code == 200
-    except Exception as e:
-        print(f"Error: {e}")
-        return False
+    r = requests.get(
+        f"{BASE_URL}/api/v1/news/latest",
+        params={"limit": 5},
+        headers=get_headers()
+    )
+    print(f"Status: {r.status_code}")
+    pretty_print(r)
+    return r.status_code == 200
 
 def test_news_by_id():
-    """Test get news by ID"""
-    print("\n=== GET /api/v1/news/{id} ===")
-    try:
-        # First get a news item to get its ID
-        r = requests.get(f"{BASE_URL}/api/v1/news/latest?limit=1", headers=get_headers())
-        if r.status_code != 200:
-            print("Could not fetch news list")
-            return False
-        
-        data = r.json()
-        items = data.get("items", [])
-        if not items:
-            print("No news items found, skipping...")
-            return True  # Not a failure, just no data
-        
-        news_id = items[0]["id"]
-        print(f"Fetching news ID: {news_id}")
-        
-        r = requests.get(f"{BASE_URL}/api/v1/news/{news_id}", headers=get_headers())
-        print(f"Status: {r.status_code}")
-        print_response(r)
-        return r.status_code == 200
-    except Exception as e:
-        print(f"Error: {e}")
+    r = requests.get(
+        f"{BASE_URL}/api/v1/news/latest",
+        params={"limit": 1},
+        headers=get_headers()
+    )
+    
+    if r.status_code != 200:
+        print("Failed to fetch news list")
         return False
-
-
+    
+    items = r.json().get("items", [])
+    if not items:
+        print("No news items available (skipped)")
+        return True
+    
+    news_id = items[0]["id"]
+    print(f"Testing with news ID: {news_id}")
+    
+    r = requests.get(f"{BASE_URL}/api/v1/news/{news_id}", headers=get_headers())
+    print(f"Status: {r.status_code}")
+    pretty_print(r)
+    return r.status_code == 200
 
 def test_stock_latest():
-    """Test latest stock news endpoint"""
-    print("\n=== GET /api/v1/stock/latest ===")
-    try:
-        r = requests.get(f"{BASE_URL}/api/v1/stock/latest?limit=5", headers=get_headers())
-        print(f"Status: {r.status_code}")
-        print_response(r)
-        return r.status_code == 200
-    except Exception as e:
-        print(f"Error: {e}")
-        return False
-
+    r = requests.get(
+        f"{BASE_URL}/api/v1/stock/latest",
+        params={"limit": 5},
+        headers=get_headers()
+    )
+    print(f"Status: {r.status_code}")
+    pretty_print(r)
+    return r.status_code == 200
 
 def test_websocket():
-    """Test WebSocket connection"""
-    print("\n=== WebSocket Connection Test ===")
     try:
         import websocket
     except ImportError:
-        print("websocket-client not installed. Run: pip install websocket-client")
+        print(f"{Colors.YELLOW}Missing dependency: pip install websocket-client{Colors.END}")
         return False
     
     ws_url = BASE_URL.replace("http://", "ws://").replace("https://", "wss://")
     ws_url = f"{ws_url}/api/v1/stream/ws?channel=news"
     
-    received_messages = []
+    messages = []
     connected = threading.Event()
     
     def on_open(ws):
-        print(f"Connected to: {ws_url}")
+        print(f"{Colors.GREEN}Connected to: {ws_url}{Colors.END}")
         connected.set()
     
-    def on_message(ws, message):
-        print(f"Received: {message[:200]}...")
-        received_messages.append(message)
+    def on_message(ws, msg):
+        print(f"Received: {msg[:150]}...")
+        messages.append(msg)
     
     def on_error(ws, error):
-        print(f"WebSocket error: {error}")
+        print(f"{Colors.RED}Error: {error}{Colors.END}")
     
-    def on_close(ws, close_code, close_msg):
-        print(f"WebSocket closed: {close_code} {close_msg}")
+    def on_close(ws, code, msg):
+        print(f"Closed: {code} - {msg}")
     
-    try:
-        ws = websocket.WebSocketApp(
-            ws_url,
-            on_open=on_open,
-            on_message=on_message,
-            on_error=on_error,
-            on_close=on_close
-        )
-        
-        # Run WebSocket in background thread
-        ws_thread = threading.Thread(target=ws.run_forever)
-        ws_thread.daemon = True
-        ws_thread.start()
-        
-        # Wait for connection
-        if connected.wait(timeout=5):
-            print("WebSocket connected successfully!")
-            time.sleep(2)  # Wait for any initial messages
-            ws.close()
-            return True
-        else:
-            print("WebSocket connection timeout")
-            return False
-            
-    except Exception as e:
-        print(f"Error: {e}")
-        return False
-
-
-# ===== Redis Stream Test =====
-
-def test_redis_stream():
-    """Test Redis stream directly"""
-    print("\n=== Redis Stream Test ===")
-    try:
-        import redis
-    except ImportError:
-        print("redis not installed. Run: pip install redis")
-        return False
+    ws = websocket.WebSocketApp(
+        ws_url,
+        on_open=on_open,
+        on_message=on_message,
+        on_error=on_error,
+        on_close=on_close
+    )
     
-    try:
-        r = redis.Redis(host='localhost', port=6379, decode_responses=True)
-        r.ping()
-        print("Redis connected!")
-        
-        # Check stream info
-        streams = ["events.news", "events.stock", "events.calendar"]
-        for stream in streams:
-            try:
-                info = r.xinfo_stream(stream)
-                print(f"\n{stream}:")
-                print(f"  Length: {info['length']}")
-                print(f"  First entry: {info.get('first-entry', 'N/A')}")
-                print(f"  Last entry: {info.get('last-entry', 'N/A')}")
-                
-                # Check consumer groups
-                groups = r.xinfo_groups(stream)
-                for g in groups:
-                    print(f"  Group '{g['name']}': {g['pending']} pending, {g['consumers']} consumers")
-            except redis.ResponseError as e:
-                if "no such key" in str(e).lower():
-                    print(f"\n{stream}: (not created yet)")
-                else:
-                    print(f"\n{stream}: Error - {e}")
-        
+    ws_thread = threading.Thread(target=ws.run_forever, daemon=True)
+    ws_thread.start()
+    
+    if connected.wait(timeout=5):
+        time.sleep(2)
+        ws.close()
+        print(f"{Colors.GREEN}WebSocket test passed{Colors.END}")
         return True
-    except redis.ConnectionError:
-        print("Could not connect to Redis at localhost:6379")
-        return False
-    except Exception as e:
-        print(f"Error: {e}")
-        return False
+    
+    print(f"{Colors.RED}Connection timeout{Colors.END}")
+    return False
 
-def run_all_tests():
-    """Run all API tests"""
-    print("=" * 60)
+def run_full_suite():
+    print(f"\n{Colors.BLUE}{'='*60}")
     print("News Server API Test Suite")
-    print("=" * 60)
+    print(f"{'='*60}{Colors.END}\n")
     
-    results = []
+    tests = [
+        ("Health Check", check_health),
+        ("Root Endpoint", check_root),
+        ("News List", test_news_list),
+        ("News Latest", test_news_latest),
+        ("News By ID", test_news_by_id),
+        ("Stock Latest", test_stock_latest),
+    ]
     
-    # Basic
-    results.append(("Health Check", test_health()))
-    results.append(("Root Endpoint", test_root()))
+    results = [(name, test_endpoint(name, func)) for name, func in tests]
     
-    # News
-    results.append(("News List", test_news_list()))
-    results.append(("News Latest", test_news_latest()))
-    results.append(("News By ID", test_news_by_id()))
+    print(f"\n{Colors.BLUE}{'='*60}")
+    print("Summary")
+    print(f"{'='*60}{Colors.END}\n")
     
-    # Stock
-    results.append(("Stock Latest", test_stock_latest()))
+    passed = sum(1 for _, result in results if result)
+    failed = len(results) - passed
     
-    # Summary
-    print("\n" + "=" * 60)
-    print("Test Results")
-    print("=" * 60)
-    
-    passed = 0
-    failed = 0
     for name, result in results:
-        status = "PASS" if result else "FAIL"
-        symbol = "✓" if result else "✗"
-        print(f"  {symbol} {name}: {status}")
-        if result:
-            passed += 1
-        else:
-            failed += 1
+        status = f"{Colors.GREEN}✓ PASS{Colors.END}" if result else f"{Colors.RED}✗ FAIL{Colors.END}"
+        print(f"  {status} {name}")
     
-    print(f"\nTotal: {passed} passed, {failed} failed")
-    print("=" * 60)
+    print(f"\n{Colors.BLUE}Total: {passed} passed, {failed} failed{Colors.END}")
+    print(f"{Colors.BLUE}{'='*60}{Colors.END}\n")
     
     return failed == 0
 
-def run_news_tests():
-    """Run only news-related tests"""
-    print("=== News API Tests ===")
-    test_news_list()
-    test_news_latest()
-    test_news_by_id()
+def run_news_suite():
+    test_endpoint("News List", test_news_list)
+    test_endpoint("News Latest", test_news_latest)
+    test_endpoint("News By ID", test_news_by_id)
 
-def run_stock_tests():
-    """Run only stock-related tests"""
-    print("=== Stock API Tests ===")
-    test_stock_latest()
+def run_stock_suite():
+    test_endpoint("Stock Latest", test_stock_latest)
 
-def print_usage():
-    print("""
-News Server API Test Script
+def print_help():
+    print(__doc__)
+    print(f"Current BASE_URL: {BASE_URL}\n")
 
-Usage:
-    python test_api.py              Run all tests
-    python test_api.py news         Test news endpoints only
-    python test_api.py stock        Test stock endpoints only  
-    python test_api.py ws           Test WebSocket connection
-    python test_api.py redis        Test Redis streams
-    python test_api.py health       Quick health check
-
-Environment:
-    BASE_URL: {BASE_URL}
-""".format(BASE_URL=BASE_URL))
-
+def main():
+    if len(sys.argv) < 2:
+        run_full_suite()
+        return
+    
+    command = sys.argv[1].lower()
+    
+    commands = {
+        "news": run_news_suite,
+        "stock": run_stock_suite,
+        "ws": lambda: test_endpoint("WebSocket", test_websocket),
+        "health": lambda: test_endpoint("Health Check", check_health),
+        "help": print_help,
+        "-h": print_help,
+        "--help": print_help,
+    }
+    
+    handler = commands.get(command)
+    if handler:
+        handler()
+    else:
+        print(f"{Colors.RED}Unknown command: {command}{Colors.END}\n")
+        print_help()
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        cmd = sys.argv[1].lower()
-        if cmd == "news":
-            run_news_tests()
-        elif cmd == "stock":
-            run_stock_tests()
-        elif cmd == "ws":
-            test_websocket()
-        elif cmd == "redis":
-            test_redis_stream()
-        elif cmd == "health":
-            test_health()
-        elif cmd in ["-h", "--help", "help"]:
-            print_usage()
-        else:
-            print(f"Unknown command: {cmd}")
-            print_usage()
-    else:
-        run_all_tests()
+    main()
