@@ -3,6 +3,7 @@ import hashlib
 from datetime import datetime, timezone
 from typing import Any
 from dataclasses import dataclass, field
+from functools import partial
 
 import httpx
 import feedparser
@@ -28,10 +29,12 @@ class RSSEntry:
 
 
 class RSSCollector:
+    _semaphore = asyncio.Semaphore(6)
 
     def __init__(self):
         self.client = httpx.AsyncClient(
-            timeout=settings.scraper_timeout,
+            timeout=httpx.Timeout(connect=5.0, read=15.0, write=5.0, pool=5.0),
+            transport=httpx.AsyncHTTPTransport(retries=2),
             headers={"User-Agent": settings.scraper_user_agent},
             follow_redirects=True,
         )
@@ -41,10 +44,14 @@ class RSSCollector:
 
     async def fetch_feed(self, url: str) -> list[RSSEntry]:
         try:
-            response = await self.client.get(url)
+            response = await asyncio.wait_for(
+                self.client.get(url),
+                timeout=20.0
+            )
             response.raise_for_status()
             
-            feed = feedparser.parse(response.text)
+            loop = asyncio.get_running_loop()
+            feed = await loop.run_in_executor(None, feedparser.parse, response.text)
             
             if feed.bozo and not feed.entries:
                 logger.warning("Feed parsing error", url=url, error=str(feed.bozo_exception))
@@ -65,6 +72,9 @@ class RSSCollector:
 
         except httpx.HTTPError as e:
             logger.error("HTTP error fetching feed", url=url, error=str(e))
+            return []
+        except asyncio.TimeoutError:
+            logger.error("Timeout fetching feed", url=url)
             return []
         except Exception as e:
             logger.error("Error fetching feed", url=url, error=str(e))
@@ -122,15 +132,14 @@ class RSSCollector:
     async def fetch_multiple_feeds(
         self,
         urls: list[str],
-        delay: float = 0.2,  
+        delay: float = 0.1,  
     ) -> dict[str, list[RSSEntry]]:
-        semaphore = asyncio.Semaphore(4)  
         async def fetch_with_limit(url: str) -> tuple[str, list[RSSEntry]]:
-            async with semaphore:
+            async with self._semaphore:
                 entries = await self.fetch_feed(url)
-                if delay > 0:
-                    await asyncio.sleep(delay)
-                return url, entries
+            if delay > 0:
+                await asyncio.sleep(delay)
+            return url, entries
         
         tasks = [fetch_with_limit(url) for url in urls]
         results_list = await asyncio.gather(*tasks, return_exceptions=True)

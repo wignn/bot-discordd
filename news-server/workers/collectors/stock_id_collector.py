@@ -4,6 +4,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 from dataclasses import dataclass, field
+from functools import partial
 
 import httpx
 import feedparser
@@ -104,9 +105,12 @@ class StockNewsEntry:
 
 
 class StockIDCollector:
+    _semaphore = asyncio.Semaphore(6)
+
     def __init__(self):
         self.client = httpx.AsyncClient(
-            timeout=30.0,
+            timeout=httpx.Timeout(connect=5.0, read=15.0, write=5.0, pool=5.0),
+            transport=httpx.AsyncHTTPTransport(retries=2),
             headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -123,10 +127,14 @@ class StockIDCollector:
         category = feed_info["category"]
         
         try:
-            response = await self.client.get(url)
+            response = await asyncio.wait_for(
+                self.client.get(url),
+                timeout=20.0
+            )
             response.raise_for_status()
             
-            feed = feedparser.parse(response.text)
+            loop = asyncio.get_running_loop()
+            feed = await loop.run_in_executor(None, feedparser.parse, response.text)
             
             if feed.bozo and not feed.entries:
                 logger.warning("Feed parsing error", url=url, error=str(feed.bozo_exception))
@@ -147,6 +155,9 @@ class StockIDCollector:
 
         except httpx.HTTPError as e:
             logger.error("HTTP error fetching stock feed", url=url, error=str(e))
+            return []
+        except asyncio.TimeoutError:
+            logger.error("Timeout fetching stock feed", url=url)
             return []
         except Exception as e:
             logger.error("Error fetching stock feed", url=url, error=str(e))
@@ -230,13 +241,13 @@ class StockIDCollector:
         return list(valid_tickers)
 
     async def fetch_all_feeds(self, delay: float = 0.2) -> dict[str, list[StockNewsEntry]]:
-        semaphore = asyncio.Semaphore(4)  
         async def fetch_with_limit(feed_info: dict) -> tuple[str, list[StockNewsEntry]]:
-            async with semaphore:
+            async with self._semaphore:  # Use class-level semaphore
                 entries = await self.fetch_feed(feed_info)
-                if delay > 0:
-                    await asyncio.sleep(delay)
-                return feed_info["name"], entries
+            # Sleep OUTSIDE semaphore to not block other requests
+            if delay > 0:
+                await asyncio.sleep(delay)
+            return feed_info["name"], entries
         
         tasks = [fetch_with_limit(feed) for feed in INDONESIA_STOCK_FEEDS]
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
@@ -254,7 +265,7 @@ class StockIDCollector:
     async def fetch_latest(self, max_entries: int = 50) -> list[StockNewsEntry]:
         all_entries = []
         
-        results = await self.fetch_all_feeds(delay=0.5)
+        results = await self.fetch_all_feeds(delay=0.1)
         
         for entries in results.values():
             all_entries.extend(entries)

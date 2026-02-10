@@ -64,7 +64,6 @@ class Settings(BaseSettings):
     scraper_delay_min: float = 1.0
     scraper_delay_max: float = 3.0
 
-    # Forex / Tiingo
     tiingo_api_key: str = ""
     forex_enabled: bool = True
 
