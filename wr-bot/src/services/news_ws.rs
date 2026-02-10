@@ -43,17 +43,22 @@ pub struct CalendarEventData {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArticleData {
     pub id: String,
+    #[serde(alias = "original_title")]
     pub title: String,
+    #[serde(alias = "translated_title")]
     pub title_id: Option<String>,
     pub summary: Option<String>,
-    pub summary_id: Option<String>, // Indonesian summary
+    pub summary_id: Option<String>,
     pub source_name: String,
+    #[serde(alias = "url")]
     pub original_url: String,
     pub sentiment: Option<String>,
     pub sentiment_confidence: Option<f64>,
     pub impact_level: Option<String>,
     pub impact_score: Option<i32>,
+    #[serde(default)]
     pub currency_pairs: Vec<String>,
+    #[serde(default)]
     pub currencies: Vec<String>,
     pub published_at: Option<String>,
     pub processed_at: String,

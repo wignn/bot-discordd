@@ -4,7 +4,6 @@ use poise::serenity_prelude::{CreateEmbed, CreateEmbedFooter};
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
-/// Stock news commands
 #[poise::command(
     slash_command,
     subcommands("subscribe", "unsubscribe", "status", "latest"),
@@ -14,7 +13,6 @@ pub async fn stocknews(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-/// Subscribe this channel to Indonesian stock news alerts
 #[poise::command(slash_command, required_permissions = "MANAGE_CHANNELS")]
 pub async fn subscribe(
     ctx: Context<'_>,
