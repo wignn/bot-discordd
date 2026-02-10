@@ -39,7 +39,7 @@ func (p *CalendarPipeline) Run(ctx context.Context) {
 
 	broadcasted := 0
 	for _, event := range events {
-		data := map[string]interface{}{
+		eventData := map[string]interface{}{
 			"event_id":      event.EventID,
 			"title":         event.Title,
 			"country":       event.Country,
@@ -51,7 +51,9 @@ func (p *CalendarPipeline) Run(ctx context.Context) {
 			"minutes_until": event.MinutesUntil,
 		}
 
-		count := p.hub.Broadcast(ws.EventCalendarReminder, data, "calendar")
+		count := p.hub.Broadcast(ws.EventCalendarReminder, map[string]interface{}{
+			"calendar_event": eventData,
+		}, "calendar")
 
 		slog.Info("calendar broadcast ok",
 			"event", event.Title,
