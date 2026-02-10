@@ -113,7 +113,6 @@ func (c *RSSCollector) FetchAllFeeds(ctx context.Context, feeds []FeedSource) ma
 		go func(f FeedSource) {
 			defer wg.Done()
 
-			// Acquire semaphore
 			c.semaphore <- struct{}{}
 			defer func() { <-c.semaphore }()
 
@@ -123,7 +122,6 @@ func (c *RSSCollector) FetchAllFeeds(ctx context.Context, feeds []FeedSource) ma
 			results[f.RSSURL] = entries
 			mu.Unlock()
 
-			// Small delay between feeds to be polite
 			time.Sleep(100 * time.Millisecond)
 		}(feed)
 	}
@@ -155,6 +153,7 @@ func (c *RSSCollector) parseItem(item *gofeed.Item, sourceName string) *RSSEntry
 	}
 
 	author := ""
+
 	if item.Author != nil {
 		author = item.Author.Name
 	}

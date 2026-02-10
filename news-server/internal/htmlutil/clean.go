@@ -7,11 +7,12 @@ import (
 )
 
 var (
-	reScriptStyle = regexp.MustCompile(`(?is)<(script|style)[^>]*>.*?</\1>`)
-	reHTMLTags    = regexp.MustCompile(`<[^>]+>`)
-	reCDATA       = regexp.MustCompile(`<!\[CDATA\[(.*?)\]\]>`)
-	reMultiNL     = regexp.MustCompile(`\n{3,}`)
-	reMultiSpace  = regexp.MustCompile(`\s{2,}`)
+	reScript     = regexp.MustCompile(`(?is)<script[^>]*>.*?</script>`)
+	reStyle      = regexp.MustCompile(`(?is)<style[^>]*>.*?</style>`)
+	reHTMLTags   = regexp.MustCompile(`<[^>]+>`)
+	reCDATA      = regexp.MustCompile(`<!\[CDATA\[(.*?)\]\]>`)
+	reMultiNL    = regexp.MustCompile(`\n{3,}`)
+	reMultiSpace = regexp.MustCompile(`\s{2,}`)
 
 	noisePatterns = []*regexp.Regexp{
 		regexp.MustCompile(`(?i)Subscribe to.*?newsletter`),
@@ -26,7 +27,8 @@ var (
 
 func StripTags(s string) string {
 	s = reCDATA.ReplaceAllString(s, "$1")
-	s = reScriptStyle.ReplaceAllString(s, "")
+	s = reScript.ReplaceAllString(s, "")
+	s = reStyle.ReplaceAllString(s, "")
 	s = reHTMLTags.ReplaceAllString(s, "")
 	s = html.UnescapeString(s)
 	return strings.TrimSpace(s)
