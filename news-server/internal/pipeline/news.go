@@ -170,7 +170,9 @@ func (p *NewsPipeline) ensureSource(ctx context.Context) string {
 		return id
 	}
 
-	newID := fmt.Sprintf("%x", sha256.Sum256([]byte("default-source")))[:36]
+	// Generate a deterministic UUID from the hash (format: 8-4-4-4-12)
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte("default-source")))
+	newID := fmt.Sprintf("%s-%s-%s-%s-%s", hash[0:8], hash[8:12], hash[12:16], hash[16:20], hash[20:32])
 	_, err = p.db.Exec(ctx,
 		`INSERT INTO news_sources (id, name, slug, source_type, url, is_active)
 		 VALUES ($1, 'Default Source', 'default', 'rss', 'https://example.com', TRUE)
