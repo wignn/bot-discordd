@@ -47,8 +47,8 @@ func (s *Server) Start() error {
 	})
 
 	// WebSocket
-	mux.HandleFunc("/api/v1/stream/ws/discord", s.hub.HandleWS)
-	mux.HandleFunc("/api/v1/stream/ws", s.hub.HandleWS)
+	mux.HandleFunc("GET /api/v1/stream/ws/discord", s.hub.HandleWS)
+	mux.HandleFunc("GET /api/v1/stream/ws", s.hub.HandleWS)
 
 	// REST API
 	RegisterNewsRoutes(mux, s.db)
