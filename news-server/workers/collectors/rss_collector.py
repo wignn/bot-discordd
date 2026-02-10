@@ -29,9 +29,10 @@ class RSSEntry:
 
 
 class RSSCollector:
-    _semaphore = asyncio.Semaphore(6)
+    _semaphore_limit = 6
 
     def __init__(self):
+        self._semaphore = asyncio.Semaphore(self._semaphore_limit)
         self.client = httpx.AsyncClient(
             timeout=httpx.Timeout(connect=5.0, read=15.0, write=5.0, pool=5.0),
             transport=httpx.AsyncHTTPTransport(retries=2),

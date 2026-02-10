@@ -25,12 +25,6 @@ INDONESIA_STOCK_FEEDS = [
         "category": "market",
     },
     {
-        "name": "Bisnis Indonesia - Market",
-        "url": "https://market.bisnis.com",
-        "rss_url": "https://www.bisnis.com/rss/market",
-        "category": "market",
-    },
-    {
         "name": "Investing.com Indonesia - Market",
         "url": "https://id.investing.com",
         "rss_url": "https://id.investing.com/rss/news_25.rss",
@@ -105,9 +99,10 @@ class StockNewsEntry:
 
 
 class StockIDCollector:
-    _semaphore = asyncio.Semaphore(6)
+    _semaphore_limit = 6
 
     def __init__(self):
+        self._semaphore = asyncio.Semaphore(self._semaphore_limit)
         self.client = httpx.AsyncClient(
             timeout=httpx.Timeout(connect=5.0, read=15.0, write=5.0, pool=5.0),
             transport=httpx.AsyncHTTPTransport(retries=2),
@@ -245,7 +240,7 @@ class StockIDCollector:
 
     async def fetch_all_feeds(self, delay: float = 0.2) -> dict[str, list[StockNewsEntry]]:
         async def fetch_with_limit(feed_info: dict) -> tuple[str, list[StockNewsEntry]]:
-            async with self._semaphore:  # Use class-level semaphore
+            async with self._semaphore:
                 entries = await self.fetch_feed(feed_info)
             if delay > 0:
                 await asyncio.sleep(delay)
