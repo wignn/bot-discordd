@@ -2,8 +2,8 @@ use crate::config::Config;
 use crate::error::BotError;
 use crate::services::ai::Ai;
 use crate::services::gemini::GeminiService;
-use poise::serenity_prelude::{CreateEmbed, CreateEmbedFooter};
 use poise::CreateReply;
+use poise::serenity_prelude::{CreateEmbed, CreateEmbedFooter};
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, super::Data, Error>;
@@ -33,7 +33,8 @@ async fn send_ai_response(ctx: Context<'_>, content: String) -> Result<(), Error
     if content.len() <= DISCORD_MAX_LEN {
         ctx.say(&content).await?;
     } else {
-        ctx.say("Response terlalu panjang, mengirim dalam beberapa pesan...").await?;
+        ctx.say("Response terlalu panjang, mengirim dalam beberapa pesan...")
+            .await?;
         let chunks = split_into_chunks(&content, CHUNK_MAX);
         for chunk in chunks {
             ctx.say(chunk).await?;
@@ -52,7 +53,7 @@ pub async fn worm(
     let config = Config::from_env()
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
-    let api_key = match &config.api_key {
+    let api_key = match &config.openrouter_api_key {
         Some(key) => key.clone(),
         None => {
             ctx.say("Fitur AI belum dikonfigurasi. Harap set `API_KEY` di environment.")
@@ -61,7 +62,12 @@ pub async fn worm(
         }
     };
 
-    let mut ai = Ai::new(config.base_url, api_key, config.model_ai, config.prompt);
+    let mut ai = Ai::new(
+        config.openrouter_base_url,
+        api_key,
+        config.openrouter_model,
+        config.prompt,
+    );
 
     let loading_msg = ctx.say("Memproses...").await?;
 
@@ -93,7 +99,6 @@ pub async fn worm(
     Ok(())
 }
 
-
 ///Gemini AI
 #[poise::command(prefix_command, slash_command, aliases("gem", "gm"))]
 pub async fn gemini(
@@ -105,17 +110,13 @@ pub async fn gemini(
     let config = Config::from_env()
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
-    if config.gemini_api_key == "api_key" {
+    if !config.is_gemini_enabled() {
         ctx.say("Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
             .await?;
         return Ok(());
     }
 
-    let gemini = GeminiService::new(
-        config.gemini_api_key,
-        None,
-        config.prompt,
-    );
+    let gemini = GeminiService::new(config.gemini_api_key, None, config.prompt);
 
     ctx.defer().await?;
 
@@ -142,22 +143,18 @@ pub async fn gemini_chat(
     let config = Config::from_env()
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
-    if config.gemini_api_key == "api_key" {
+    if !config.is_gemini_enabled() {
         ctx.say("Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
             .await?;
         return Ok(());
     }
 
-    let gemini = GeminiService::new(
-        config.gemini_api_key,
-        None,
-        config.prompt,
-    );
+    let gemini = GeminiService::new(config.gemini_api_key, None, config.prompt);
 
     ctx.defer().await?;
 
     let user_id = ctx.author().id.to_string();
-    
+
     match gemini.chat(&user_id, &text).await {
         Ok(response) => {
             send_ai_response(ctx, response).await?;
@@ -176,16 +173,12 @@ pub async fn gemini_clear(ctx: Context<'_>) -> Result<(), Error> {
     let config = Config::from_env()
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
-    if config.gemini_api_key == "api_key" {
+    if !config.is_gemini_enabled() {
         ctx.say("Fitur Gemini AI belum dikonfigurasi.").await?;
         return Ok(());
     }
 
-    let gemini = GeminiService::new(
-        config.gemini_api_key,
-        None,
-        config.prompt,
-    );
+    let gemini = GeminiService::new(config.gemini_api_key, None, config.prompt);
 
     let user_id = ctx.author().id.to_string();
     gemini.clear_history(&user_id).await;
@@ -198,8 +191,7 @@ pub async fn gemini_clear(ctx: Context<'_>) -> Result<(), Error> {
 #[poise::command(prefix_command, slash_command, aliases("gvision", "gv"))]
 pub async fn gemini_vision(
     ctx: Context<'_>,
-    #[description = "URL gambar untuk dianalisis"]
-    image_url: String,
+    #[description = "URL gambar untuk dianalisis"] image_url: String,
     #[rest]
     #[description = "Pertanyaan tentang gambar (opsional)"]
     prompt: Option<String>,
@@ -207,17 +199,13 @@ pub async fn gemini_vision(
     let config = Config::from_env()
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
-    if config.gemini_api_key == "api_key" {
+    if !config.is_gemini_enabled() {
         ctx.say("Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
             .await?;
         return Ok(());
     }
 
-    let gemini = GeminiService::new(
-        config.gemini_api_key,
-        None,
-        config.prompt,
-    );
+    let gemini = GeminiService::new(config.gemini_api_key, None, config.prompt);
 
     ctx.defer().await?;
 
@@ -248,10 +236,8 @@ pub async fn gemini_vision(
 #[poise::command(prefix_command, aliases("market", "chart", "ta"))]
 pub async fn analisa(
     ctx: Context<'_>,
-    #[description = "Symbol/Pair (contoh: BTCUSDT, EURUSD, XAUUSD)"]
-    symbol: Option<String>,
-    #[description = "Timeframe (contoh: 1H, 4H, 1D, 1W)"]
-    timeframe: Option<String>,
+    #[description = "Symbol/Pair (contoh: BTCUSDT, EURUSD, XAUUSD)"] symbol: Option<String>,
+    #[description = "Timeframe (contoh: 1H, 4H, 1D, 1W)"] timeframe: Option<String>,
     #[rest]
     #[description = "Konteks tambahan (opsional)"]
     context: Option<String>,
@@ -259,7 +245,7 @@ pub async fn analisa(
     let config = Config::from_env()
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
-    if config.gemini_api_key == "api_key" {
+    if !config.is_gemini_enabled() {
         ctx.say("Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
             .await?;
         return Ok(());
@@ -270,7 +256,12 @@ pub async fn analisa(
         poise::Context::Prefix(prefix_ctx) => {
             // Check attachments in current message
             if let Some(attachment) = prefix_ctx.msg.attachments.first() {
-                if attachment.content_type.as_ref().map(|ct| ct.starts_with("image/")).unwrap_or(false) {
+                if attachment
+                    .content_type
+                    .as_ref()
+                    .map(|ct| ct.starts_with("image/"))
+                    .unwrap_or(false)
+                {
                     Some(attachment.url.clone())
                 } else {
                     None
@@ -278,12 +269,21 @@ pub async fn analisa(
             }
             // Check if replying to a message with image
             else if let Some(ref replied) = prefix_ctx.msg.referenced_message {
-                replied.attachments.first()
-                    .filter(|a| a.content_type.as_ref().map(|ct| ct.starts_with("image/")).unwrap_or(false))
+                replied
+                    .attachments
+                    .first()
+                    .filter(|a| {
+                        a.content_type
+                            .as_ref()
+                            .map(|ct| ct.starts_with("image/"))
+                            .unwrap_or(false)
+                    })
                     .map(|a| a.url.clone())
                     .or_else(|| {
                         // Check embeds for image
-                        replied.embeds.first()
+                        replied
+                            .embeds
+                            .first()
                             .and_then(|e| e.image.as_ref().map(|i| i.url.clone()))
                     })
             } else {
@@ -301,29 +301,36 @@ pub async fn analisa(
         }
     };
 
-    let gemini = GeminiService::new(
-        config.gemini_api_key,
-        None,
-        config.gemini_prompt,
-    );
+    let gemini = GeminiService::new(config.gemini_api_key, None, config.gemini_prompt);
 
-    let loading_msg = ctx.say("Menganalisis chart... Mohon tunggu sebentar.").await?;
+    let loading_msg = ctx
+        .say("Menganalisis chart... Mohon tunggu sebentar.")
+        .await?;
 
-    match gemini.analyze_market_image(
-        &image_url, 
-        symbol.as_deref(), 
-        timeframe.as_deref(),
-        context.as_deref()
-    ).await {
+    match gemini
+        .analyze_market_image(
+            &image_url,
+            symbol.as_deref(),
+            timeframe.as_deref(),
+            context.as_deref(),
+        )
+        .await
+    {
         Ok(response) => {
             loading_msg.delete(ctx).await.ok();
-            
+
             let title = format!(
                 "Market Analysis{}{}",
-                symbol.as_ref().map(|s| format!(" - {}", s)).unwrap_or_default(),
-                timeframe.as_ref().map(|t| format!(" ({})", t)).unwrap_or_default()
+                symbol
+                    .as_ref()
+                    .map(|s| format!(" - {}", s))
+                    .unwrap_or_default(),
+                timeframe
+                    .as_ref()
+                    .map(|t| format!(" ({})", t))
+                    .unwrap_or_default()
             );
-            
+
             // Response biasanya panjang, kirim sebagai text biasa
             if response.len() > 4000 {
                 send_ai_response(ctx, format!("**{}**\n\n{}", title, response)).await?;
@@ -358,17 +365,15 @@ pub async fn gemini_summarize(
     let config = Config::from_env()
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
-    if config.gemini_api_key == "api_key" {
-        ctx.say("❌ Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
-            .await?;
+    if !config.is_gemini_enabled() {
+        ctx.say(
+            "❌ Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.",
+        )
+        .await?;
         return Ok(());
     }
 
-    let gemini = GeminiService::new(
-        config.gemini_api_key,
-        None,
-        String::new(),
-    );
+    let gemini = GeminiService::new(config.gemini_api_key, None, String::new());
 
     ctx.defer().await?;
 
@@ -398,8 +403,7 @@ pub async fn gemini_summarize(
 #[poise::command(prefix_command, slash_command, aliases("gtrans", "gt"))]
 pub async fn gemini_translate(
     ctx: Context<'_>,
-    #[description = "Bahasa tujuan (contoh: Indonesia, English, Japanese)"]
-    target_language: String,
+    #[description = "Bahasa tujuan (contoh: Indonesia, English, Japanese)"] target_language: String,
     #[rest]
     #[description = "Teks yang ingin diterjemahkan"]
     text: String,
@@ -407,17 +411,15 @@ pub async fn gemini_translate(
     let config = Config::from_env()
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
-    if config.gemini_api_key == "api_key" {
-        ctx.say("❌ Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
-            .await?;
+    if !config.is_gemini_enabled() {
+        ctx.say(
+            "❌ Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.",
+        )
+        .await?;
         return Ok(());
     }
 
-    let gemini = GeminiService::new(
-        config.gemini_api_key,
-        None,
-        String::new(),
-    );
+    let gemini = GeminiService::new(config.gemini_api_key, None, String::new());
 
     ctx.defer().await?;
 
@@ -431,7 +433,11 @@ pub async fn gemini_translate(
                 .footer(CreateEmbedFooter::new("Powered by Gemini AI"));
 
             if response.len() > 1000 || text.len() > 1000 {
-                ctx.say(format!("**🌐 Terjemahan ke {}:**\n\n{}", target_language, response)).await?;
+                ctx.say(format!(
+                    "**🌐 Terjemahan ke {}:**\n\n{}",
+                    target_language, response
+                ))
+                .await?;
             } else {
                 ctx.send(CreateReply::default().embed(embed)).await?;
             }
@@ -448,8 +454,7 @@ pub async fn gemini_translate(
 #[poise::command(prefix_command, slash_command, aliases("gcode"))]
 pub async fn gemini_code(
     ctx: Context<'_>,
-    #[description = "Bahasa pemrograman (contoh: Python, Rust, JavaScript)"]
-    language: String,
+    #[description = "Bahasa pemrograman (contoh: Python, Rust, JavaScript)"] language: String,
     #[rest]
     #[description = "Deskripsi kode yang ingin dibuat"]
     description: String,
@@ -457,23 +462,25 @@ pub async fn gemini_code(
     let config = Config::from_env()
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
-    if config.gemini_api_key == "api_key" {
-        ctx.say("❌ Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
-            .await?;
+    if !config.is_gemini_enabled() {
+        ctx.say(
+            "❌ Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.",
+        )
+        .await?;
         return Ok(());
     }
 
-    let gemini = GeminiService::new(
-        config.gemini_api_key,
-        None,
-        String::new(),
-    );
+    let gemini = GeminiService::new(config.gemini_api_key, None, String::new());
 
     ctx.defer().await?;
 
     match gemini.generate_code(&description, &language).await {
         Ok(response) => {
-            send_ai_response(ctx, format!("**💻 Code Generation ({}):**\n\n{}", language, response)).await?;
+            send_ai_response(
+                ctx,
+                format!("**💻 Code Generation ({}):**\n\n{}", language, response),
+            )
+            .await?;
         }
         Err(e) => {
             ctx.say(format!("❌ Error: {}", e)).await?;
@@ -494,17 +501,15 @@ pub async fn gemini_explain(
     let config = Config::from_env()
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
-    if config.gemini_api_key == "api_key" {
-        ctx.say("❌ Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
-            .await?;
+    if !config.is_gemini_enabled() {
+        ctx.say(
+            "❌ Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.",
+        )
+        .await?;
         return Ok(());
     }
 
-    let gemini = GeminiService::new(
-        config.gemini_api_key,
-        None,
-        String::new(),
-    );
+    let gemini = GeminiService::new(config.gemini_api_key, None, String::new());
 
     ctx.defer().await?;
 
@@ -519,4 +524,3 @@ pub async fn gemini_explain(
 
     Ok(())
 }
-

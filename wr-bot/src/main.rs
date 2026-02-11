@@ -8,7 +8,7 @@ use songbird::SerenityInit;
 use std::collections::HashSet;
 use std::env;
 use worm::commands::{
-    Data, admin, ai, calendar, forex, general, moderation, music, ping, stock, sys, mean
+    Data, admin, ai, calendar, forex, general, mean, moderation, music, ping, stock, sys,
 };
 use worm::config::Config;
 use worm::error::BotError;
@@ -49,10 +49,16 @@ async fn main() -> Result<(), BotError> {
 
     println!("[OK] Database initialized successfully");
 
-    if config.is_ai_enabled() {
-        println!("[OK] AI features enabled");
+    if config.is_openrouter_enabled() {
+        println!("[OK] OpenRouter AI enabled (worm command)");
     } else {
-        println!("[WARN] AI features disabled (no API_KEY configured)");
+        println!("[WARN] OpenRouter AI disabled (no API_KEY configured)");
+    }
+
+    if config.is_gemini_enabled() {
+        println!("[OK] Gemini AI enabled");
+    } else {
+        println!("[WARN] Gemini AI disabled (no GEMINI_API_KEY configured)");
     }
 
     let lavalink_host = env::var("LAVALINK_HOST").unwrap_or_else(|_| "localhost".to_string());
@@ -143,9 +149,7 @@ async fn main() -> Result<(), BotError> {
                 stock::stocknews(),
                 stock::search(),
                 stock::market(),
-
-                mean::mean()
-
+                mean::mean(),
             ],
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("!".into()),

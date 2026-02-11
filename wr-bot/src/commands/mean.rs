@@ -1,10 +1,7 @@
 use poise::CreateReply;
 
-use crate::{
-    config::Config,
-    error::BotError,
-    services::ai::Ai,
-};
+use crate::services::gemini::GeminiService;
+use crate::{config::Config, error::BotError};
 
 fn split_into_chunks(s: &str, max: usize) -> Vec<String> {
     let mut chunks = Vec::new();
@@ -32,13 +29,11 @@ pub async fn mean(ctx: Context<'_>) -> Result<(), Error> {
     let config = Config::from_env()
         .map_err(|e| BotError::Config(format!("Failed to load config: {}", e)))?;
 
-    let api_key = match &config.api_key {
-        Some(key) => key.clone(),
-        None => {
-            ctx.say("AI belum dikonfigurasi").await?;
-            return Ok(());
-        }
-    };
+    if !config.is_gemini_enabled() {
+        ctx.say("Fitur Gemini AI belum dikonfigurasi. Harap set `GEMINI_API_KEY` di environment.")
+            .await?;
+        return Ok(());
+    }
 
     let prefix_ctx = match ctx {
         poise::Context::Prefix(p) => p,
@@ -68,29 +63,35 @@ pub async fn mean(ctx: Context<'_>) -> Result<(), Error> {
 
     let title = embed.title.clone().unwrap_or_default();
     let description = embed.description.clone().unwrap_or_default();
-    let url = embed.url.clone().unwrap_or_default();
+    let url: String = embed.url.clone().unwrap_or_default();
+
+    const SYS_PROMPT: &str = "Anda adalah analis makroekonomi dan valuta asing profesional.
+Gunakan pendekatan berbasis data, hindari opini spekulatif tanpa dasar.
+Fokus pada implikasi kebijakan moneter, arus modal, yield obligasi, dan sentimen risiko global.
+Gunakan bahasa formal dan ringkas.
+";
 
     let analysis_prompt = format!(
-        "Anda adalah analis makroekonomi dan valuta asing profesional.
+        "Analisis berita berikut dan berikan:
 
-Analisis berita berikut dan berikan:
-1. Ringkasan yang jelas dalam 3-5 kalimat.
+1. Ringkasan yang jelas dalam 3-5 kalimat dan mudah di pahami orang awam.
 2. Penilaian dampak pasar (jangka pendek dan menengah).
 3. Arah bias jika relevan (bullish/bearish/netral).
 4. Faktor risiko yang perlu dipantau.
+5. Baca berita dari link beritanya
 
 Data Berita:
 Judul: {}
 Deskripsi: {}
-URL: {}",
+URL: {}
+",
         title, description, url
     );
 
-    let mut ai = Ai::new(
-        config.base_url,
-        api_key,
-        config.model_ai,
-        config.prompt,
+    let gemini = GeminiService::new(
+        config.gemini_api_key,
+        config.gemini_model,
+        SYS_PROMPT.to_string(),
     );
 
     let loading_msg = ctx.say("Processing...").await?;
@@ -98,7 +99,7 @@ URL: {}",
     const DISCORD_MAX_LEN: usize = 2000;
     const CHUNK_MAX: usize = 1900;
 
-    let response = ai.call_api(analysis_prompt).await;
+    let response = gemini.generate(&analysis_prompt).await;
     let content = match response {
         Ok(res) => res,
         Err(e) => format!("AI error: {}", e),
@@ -112,8 +113,7 @@ URL: {}",
         loading_msg
             .edit(
                 ctx,
-                CreateReply::default()
-                    .content("Response terlalu panjang, dikirim terpisah"),
+                CreateReply::default().content("Response terlalu panjang, dikirim terpisah"),
             )
             .await?;
 

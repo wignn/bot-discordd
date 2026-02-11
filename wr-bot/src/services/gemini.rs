@@ -70,7 +70,6 @@ pub struct GeminiService {
     model: String,
     system_prompt: String,
     http_client: Client,
-    // Conversation history per user (user_id -> Vec<(role, message)>)
     history: Arc<RwLock<HashMap<String, Vec<(String, String)>>>>,
 }
 
