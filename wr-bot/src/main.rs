@@ -8,7 +8,7 @@ use songbird::SerenityInit;
 use std::collections::HashSet;
 use std::env;
 use worm::commands::{
-    Data, admin, ai, calendar, forex, general, moderation, music, ping, stock, sys, video,
+    Data, admin, ai, calendar, forex, general, moderation, music, ping, stock, sys
 };
 use worm::config::Config;
 use worm::error::BotError;
@@ -143,10 +143,7 @@ async fn main() -> Result<(), BotError> {
                 stock::stocknews(),
                 stock::search(),
                 stock::market(),
-                // Video streaming commands
-                video::watch(),
-                video::stopwatch(),
-                video::watchstatus(),
+
             ],
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("!".into()),

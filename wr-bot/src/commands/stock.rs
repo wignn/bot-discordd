@@ -25,6 +25,13 @@ pub async fn subscribe(
     let mention = mention_everyone.unwrap_or(false);
     
     sqlx::query(
+        "UPDATE stock_news_channels SET is_active = FALSE, updated_at = NOW() WHERE guild_id = $1 AND is_active = TRUE"
+    )
+    .bind(guild_id)
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
         r#"
         INSERT INTO stock_news_channels (channel_id, guild_id, mention_everyone, is_active)
         VALUES ($1, $2, $3, TRUE)
