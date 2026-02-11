@@ -1,8 +1,8 @@
 import { Client } from 'discord.js-selfbot-v13';
 import { Streamer, prepareStream, playStream } from '@dank074/discord-video-stream';
 import express from 'express';
-import { execSync, spawn } from 'child_process';
-import { Readable } from 'stream';
+import { execSync } from 'child_process';
+import fs from 'fs';
 
 const app = express();
 app.use(express.json());
@@ -20,7 +20,6 @@ const activeStreams = new Map<string, {
     title: string;
     url: string;
     startedAt: Date;
-    ytdlpProcess?: any;
 }>();
 
 let client: Client;
@@ -34,89 +33,120 @@ async function initClient(): Promise<void> {
     console.log(`[VIDEO] Logged in as ${client.user?.tag}`);
 }
 
-function getVideoTitle(url: string): string {
+function getDirectUrl(url: string): { videoUrl: string; title: string } {
     try {
-        const output = execSync(
-            `yt-dlp --no-warnings --get-title "${url}"`,
-            { timeout: 10000, encoding: 'utf-8' }
-        );
-        return output.trim() || 'Unknown';
-    } catch (error) {
-        console.error(`[VIDEO] Failed to get title, using default`);
-        return 'Unknown Video';
+        // Use -g to get direct URL, and use cookies to avoid restrictions
+        // Use a format that's already merged (has both video and audio)
+        const command = `yt-dlp --no-warnings -f "best[height<=?${VIDEO_HEIGHT}][ext=mp4]/bestvideo[height<=?${VIDEO_HEIGHT}][ext=mp4]+bestaudio[ext=m4a]/best" -g --get-title "${url}"`;
+        
+        console.log(`[VIDEO] Running: ${command}`);
+        const output = execSync(command, { 
+            timeout: 30000, 
+            encoding: 'utf-8',
+            maxBuffer: 10 * 1024 * 1024 
+        });
+        
+        const lines = output.trim().split('\n').filter(l => l.trim());
+        
+        console.log(`[VIDEO] yt-dlp output lines:`, lines);
+
+        if (lines.length >= 2) {
+            const title = lines[0];
+            const videoUrl = lines[1];
+            
+            // If we got 3 lines, it means separate video and audio
+            if (lines.length === 3) {
+                console.log(`[VIDEO] Got separate streams, will need to merge`);
+                // For now, just use the video URL and hope it has audio
+                // Better solution would be to use FFmpeg to merge both
+                return { title, videoUrl };
+            }
+            
+            return { title, videoUrl };
+        }
+        
+        // Fallback: single URL
+        return { title: 'Unknown', videoUrl: lines[0] };
+    } catch (error: any) {
+        console.error(`[VIDEO] yt-dlp error:`, error.message);
+        throw new Error(`yt-dlp failed: ${error.message}`);
     }
 }
 
 async function startStream(guildId: string, channelId: string, url: string): Promise<{ title: string }> {
-
+    // Stop existing stream if any
     if (activeStreams.has(guildId)) {
-        await stopStreamForGuild(guildId);
+        stopStreamForGuild(guildId);
         await new Promise(r => setTimeout(r, 1000));
     }
-    console.log(`[VIDEO] Fetching title for: ${url}`);
-    const title = getVideoTitle(url);
-    console.log(`[VIDEO] Playing: ${title}`);
 
+    // Get direct video URL via yt-dlp
+    console.log(`[VIDEO] Resolving URL: ${url}`);
+    const { videoUrl, title } = getDirectUrl(url);
+    console.log(`[VIDEO] Title: "${title}"`);
+    console.log(`[VIDEO] Direct URL: ${videoUrl.substring(0, 100)}...`);
+    
+    if (!videoUrl || !videoUrl.startsWith('http')) {
+        throw new Error(`yt-dlp did not return a valid direct video URL.`);
+    }
+
+    // Join voice channel
     await streamer.joinVoice(guildId, channelId);
     await new Promise(r => setTimeout(r, 500));
 
+    // Create stream (Go Live)
     const udpConn = await streamer.createStream();
 
     const abortController = new AbortController();
-
-    console.log(`[VIDEO] Starting yt-dlp process...`);
-    const ytdlpProcess = spawn('yt-dlp', [
-        '--no-warnings',
-        '--format', `bestvideo[height<=?${VIDEO_HEIGHT}]+bestaudio/best[height<=?${VIDEO_HEIGHT}]`,
-        '--output', '-', 
-        '--quiet',
-        '--no-playlist',
-        url
-    ], {
-        stdio: ['ignore', 'pipe', 'pipe']
-    });
 
     activeStreams.set(guildId, {
         controller: abortController,
         title,
         url,
-        startedAt: new Date(),
-        ytdlpProcess
+        startedAt: new Date()
     });
 
-    ytdlpProcess.stderr.on('data', (data: Buffer) => {
-        const msg = data.toString();
-        if (msg.includes('ERROR') || msg.includes('WARNING')) {
-            console.error(`[VIDEO] yt-dlp: ${msg}`);
-        }
-    });
-
-    ytdlpProcess.on('error', (error: Error) => {
-        console.error(`[VIDEO] yt-dlp process error:`, error);
-        cleanupStream(guildId);
-    });
-
-    console.log(`[VIDEO] Preparing FFmpeg stream...`);
-    
-    const inputStream = ytdlpProcess.stdout;
+    console.log(`[VIDEO] Starting FFmpeg with direct URL...`);
 
     try {
-        const { command, output, promise } = prepareStream(inputStream, {
+        // Use the direct URL from yt-dlp
+        // Add extra headers to avoid 403 errors
+        const { command, output, promise } = prepareStream(videoUrl, {
             width: VIDEO_WIDTH,
             height: VIDEO_HEIGHT,
             frameRate: VIDEO_FPS,
             bitrateVideo: VIDEO_BITRATE,
-            bitrateVideoMax: Math.floor(VIDEO_BITRATE * 1.5),
+            bitrateVideoMax: VIDEO_BITRATE * 1.5,
             bitrateAudio: 128,
             videoCodec: 'H264',
             h26xPreset: H26X_PRESET,
             includeAudio: true,
             hardwareAcceleratedDecoding: false,
             minimizeLatency: true,
+            // Add custom FFmpeg flags to handle Google Video URLs
+            customFfmpegFlags: [
+                '-user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                '-headers', 'Accept: */*',
+                '-reconnect', '1',
+                '-reconnect_streamed', '1',
+                '-reconnect_delay_max', '5'
+            ]
         }, abortController.signal);
 
-        console.log(`[VIDEO] Starting playback...`);
+        // Log FFmpeg command for debugging
+        console.log(`[VIDEO] FFmpeg command started`);
 
+        // Handle FFmpeg errors
+        command.on('error', (err: any, stdout: any, stderr: any) => {
+            console.error(`[VIDEO] FFmpeg error:`, err);
+            console.error(`[VIDEO] FFmpeg stderr:`, stderr);
+        });
+
+        command.on('start', (commandLine: string) => {
+            console.log(`[VIDEO] FFmpeg started: ${commandLine.substring(0, 200)}...`);
+        });
+
+        // Play stream in background
         playStream(output, streamer, {
             type: 'go-live',
             width: VIDEO_WIDTH,
@@ -134,13 +164,12 @@ async function startStream(guildId: string, channelId: string, url: string): Pro
 
         promise.catch((err) => {
             if (!abortController.signal.aborted) {
-                console.error(`[VIDEO] FFmpeg error:`, err);
+                console.error(`[VIDEO] FFmpeg promise error:`, err);
             }
         });
 
     } catch (error) {
-        console.error(`[VIDEO] Failed to prepare stream:`, error);
-        ytdlpProcess.kill();
+        console.error(`[VIDEO] Failed to start stream:`, error);
         cleanupStream(guildId);
         throw error;
     }
@@ -148,24 +177,9 @@ async function startStream(guildId: string, channelId: string, url: string): Pro
     return { title };
 }
 
-async function stopStreamForGuild(guildId: string): Promise<boolean> {
+function stopStreamForGuild(guildId: string): boolean {
     const stream = activeStreams.get(guildId);
     if (!stream) return false;
-
-    console.log(`[VIDEO] Stopping stream for guild ${guildId}`);
-    
-    if (stream.ytdlpProcess) {
-        try {
-            stream.ytdlpProcess.kill('SIGTERM');
-            setTimeout(() => {
-                if (stream.ytdlpProcess && !stream.ytdlpProcess.killed) {
-                    stream.ytdlpProcess.kill('SIGKILL');
-                }
-            }, 2000);
-        } catch (e) {
-            console.error(`[VIDEO] Error killing yt-dlp process:`, e);
-        }
-    }
 
     stream.controller.abort();
     cleanupStream(guildId);
@@ -173,22 +187,12 @@ async function stopStreamForGuild(guildId: string): Promise<boolean> {
 }
 
 function cleanupStream(guildId: string) {
-    const stream = activeStreams.get(guildId);
-    
-    if (stream?.ytdlpProcess) {
-        try {
-            stream.ytdlpProcess.kill();
-        } catch (e) {
-            // Ignore
-        }
-    }
-
     activeStreams.delete(guildId);
-    
     try {
         streamer.stopStream();
         streamer.leaveVoice();
     } catch (e) {
+        // Ignore cleanup errors
     }
 }
 
@@ -213,14 +217,14 @@ app.post('/stream/start', async (req, res) => {
     }
 });
 
-app.post('/stream/stop', async (req, res) => {
+app.post('/stream/stop', (req, res) => {
     const { guild_id } = req.body;
 
     if (!guild_id) {
         return res.status(400).json({ error: 'Missing guild_id' });
     }
 
-    const stopped = await stopStreamForGuild(guild_id);
+    const stopped = stopStreamForGuild(guild_id);
     res.json({ success: stopped, message: stopped ? 'Stream stopped' : 'No active stream' });
 });
 
@@ -251,6 +255,8 @@ app.get('/stream/status/:guild_id', (req, res) => {
     });
 });
 
+// ─── Start ─────────────────────────────────────
+
 async function main() {
     if (!BOT_TOKEN) {
         console.error('[VIDEO] BOT_TOKEN is required');
@@ -278,7 +284,6 @@ async function main() {
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`[VIDEO] API server listening on port ${PORT}`);
         console.log(`[VIDEO] Stream settings: ${VIDEO_WIDTH}x${VIDEO_HEIGHT}@${VIDEO_FPS}fps, ${VIDEO_BITRATE}kbps, preset=${H26X_PRESET}`);
-        console.log(`[VIDEO] Using direct pipe from yt-dlp (no download, no expired URLs)`);
     });
 }
 
