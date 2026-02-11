@@ -1,16 +1,14 @@
 pub mod admin;
 pub mod ai;
 pub mod calendar;
-
 pub mod forex;
 pub mod general;
 pub mod moderation;
 pub mod music;
 pub mod ping;
-
 pub mod stock;
-
 pub mod sys;
+pub mod video;
 
 use crate::repository::DbPool;
 use crate::services::music::MusicPlayer;

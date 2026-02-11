@@ -1,0 +1,22 @@
+{
+    "name": "video-service",
+    "version": "1.0.0",
+    "description": "Discord YouTube Video Streaming Service",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "dev": "tsx src/index.ts"
+    },
+    "dependencies": {
+        "@dank074/discord-video-stream": "^5.0.2",
+        "discord.js-selfbot-v13": "^3.7.1",
+        "express": "^4.21.0"
+    },
+    "devDependencies": {
+        "@types/express": "^5.0.0",
+        "@types/node": "^22.0.0",
+        "tsx": "^4.19.0",
+        "typescript": "^5.6.0"
+    }
+}
