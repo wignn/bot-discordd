@@ -75,7 +75,6 @@ services:
     container_name: video-service
     image: wign/video-service:latest
     restart: unless-stopped
-    environment:
     env_file:
       - ./video-service/.env
     ports:
