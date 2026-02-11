@@ -73,7 +73,6 @@ func (s *ArticleScraper) Scrape(ctx context.Context, articleURL string) (*Scrape
 		return nil, fmt.Errorf("parse html: %w", err)
 	}
 
-	// Remove noise elements
 	doc.Find("script, style, nav, header, footer, aside, .ad, .advertisement, .social-share").Remove()
 
 	title := extractTitle(doc)
