@@ -11,11 +11,11 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 COPY tsconfig.json ./
 COPY src/ ./src/
 
-RUN npx tsc
+RUN npx -p typescript tsc
 
 CMD ["node", "dist/index.js"]
