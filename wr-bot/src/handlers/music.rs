@@ -129,6 +129,8 @@ async fn handle_autoplay(
     if !player.is_autoplay(guild_id) {
         println!("[MUSIC] Autoplay is disabled");
         player.set_current(guild_id, None);
+        // Reset idle timer so the 2-minute countdown starts NOW, not from when the track started
+        player.touch_activity(guild_id);
         return;
     }
 
@@ -196,6 +198,7 @@ async fn handle_autoplay(
             None => {
                 println!("[MUSIC] Autoplay: YouTube API not available");
                 player.set_current(guild_id, None);
+                player.touch_activity(guild_id);
                 return;
             }
         };
@@ -242,6 +245,8 @@ async fn handle_autoplay(
     if tracks.is_empty() {
         println!("[MUSIC] Autoplay: no tracks found (all filtered or mix empty)");
         player.set_current(guild_id, None);
+        // Reset idle timer so the 2-minute countdown starts NOW
+        player.touch_activity(guild_id);
         // Clear history when we run out of tracks to allow fresh start
         player.clear_played_video_ids(guild_id);
         return;

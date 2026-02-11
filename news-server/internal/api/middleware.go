@@ -28,8 +28,14 @@ func (m *APIKeyMiddleware) Wrap(next http.Handler) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip auth for health check
 		if r.URL.Path == "/health" || r.URL.Path == "/" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		if r.Method == "GET" && (strings.HasPrefix(r.URL.Path, "/api/v1/news") ||
+			strings.HasPrefix(r.URL.Path, "/api/v1/stock") ||
+			strings.HasPrefix(r.URL.Path, "/api/v1/stream")) {
 			next.ServeHTTP(w, r)
 			return
 		}

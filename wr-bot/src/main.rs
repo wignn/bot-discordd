@@ -303,6 +303,8 @@ async fn main() -> Result<(), BotError> {
                     if let Some(player_ctx) = player.get_player_context(guild_id) {
                         let _ = player_ctx.close();
                     }
+                    let lavalink_guild_id = lavalink_rs::model::GuildId(guild_id.get());
+                    let _ = player.lavalink.delete_player(lavalink_guild_id).await;
                     let _ = songbird_for_idle.leave(guild_id).await;
 
                     if let Some(channel_id) = text_channel {

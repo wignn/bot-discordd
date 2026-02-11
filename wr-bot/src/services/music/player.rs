@@ -278,7 +278,6 @@ impl MusicPlayer {
         }
     }
 
-    /// Update activity timestamp for a guild (call when music starts playing)
     pub fn touch_activity(&self, guild_id: GuildId) {
         let mut queues = self.queues.write();
         if let Some(queue) = queues.get_mut(&guild_id) {
@@ -286,7 +285,6 @@ impl MusicPlayer {
         }
     }
 
-    /// Get all guilds that have been idle (no current track) for the given duration
     pub fn get_idle_guilds(
         &self,
         idle_duration: std::time::Duration,

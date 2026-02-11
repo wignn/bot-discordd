@@ -130,7 +130,10 @@ pub async fn leave(ctx: Context<'_>) -> Result<(), Error> {
     if let Some(player_ctx) = player.get_player_context(guild_id) {
         let _ = player_ctx.close();
     }
+    let lavalink_guild_id = lavalink_rs::model::GuildId(guild_id.get());
+    let _ = player.lavalink.delete_player(lavalink_guild_id).await;
     player.clear_queue(guild_id);
+    player.remove_queue(guild_id);
 
     let songbird = ctx.data().songbird.clone();
     let _ = songbird.leave(guild_id).await;
@@ -178,7 +181,20 @@ pub async fn play(
     ctx.defer().await?;
 
     let songbird = ctx.data().songbird.clone();
-    let needs_join = player.get_player_context(guild_id).is_none();
+    let needs_join = match player.get_player_context(guild_id) {
+        Some(ctx) => match ctx.get_player().await {
+            Ok(p) if p.state.connected => false,
+            _ => {
+                println!("[MUSIC] Stale player context found, cleaning up...");
+                let _ = ctx.close();
+                let lavalink_guild_id = lavalink_rs::model::GuildId(guild_id.get());
+                let _ = player.lavalink.delete_player(lavalink_guild_id).await;
+                player.remove_queue(guild_id);
+                true
+            }
+        },
+        None => true,
+    };
 
     if needs_join {
         let (connection_info, _handle) = match songbird.join_gateway(guild_id, channel_id).await {

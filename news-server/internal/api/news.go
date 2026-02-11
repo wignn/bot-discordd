@@ -91,11 +91,15 @@ func handleLatestNews(db *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		rows, err := db.Query(r.Context(),
-			`SELECT id, content_hash, original_url, original_title,
-				summary, published_at, processed_at
-			 FROM news_articles
-			 WHERE is_processed = TRUE
-			 ORDER BY processed_at DESC NULLS LAST
+			`SELECT a.id, a.content_hash, a.original_url, a.original_title,
+				a.translated_title, a.summary, a.published_at, a.processed_at,
+				COALESCE(s.name, 'Unknown') AS source_name,
+				an.sentiment, an.impact_level, an.currency_pairs
+			 FROM news_articles a
+			 LEFT JOIN news_sources s ON a.source_id = s.id
+			 LEFT JOIN news_analyses an ON an.article_id = a.id
+			 WHERE a.is_processed = TRUE
+			 ORDER BY a.processed_at DESC NULLS LAST
 			 LIMIT $1`, limit)
 		if err != nil {
 			slog.Error("latest news query failed", "error", err)
@@ -107,21 +111,30 @@ func handleLatestNews(db *pgxpool.Pool) http.HandlerFunc {
 		var items []map[string]interface{}
 		for rows.Next() {
 			var id, contentHash, url, title string
-			var summary, publishedAt, processedAt interface{}
+			var translatedTitle, summary, publishedAt, processedAt interface{}
+			var sourceName string
+			var sentiment, impactLevel, currencyPairs interface{}
 
 			if err := rows.Scan(&id, &contentHash, &url, &title,
-				&summary, &publishedAt, &processedAt); err != nil {
+				&translatedTitle, &summary, &publishedAt, &processedAt,
+				&sourceName, &sentiment, &impactLevel, &currencyPairs); err != nil {
+				slog.Debug("scan row failed", "error", err)
 				continue
 			}
 
 			items = append(items, map[string]interface{}{
-				"id":             id,
-				"content_hash":   contentHash,
-				"original_url":   url,
-				"original_title": title,
-				"summary":        summary,
-				"published_at":   publishedAt,
-				"processed_at":   processedAt,
+				"id":               id,
+				"content_hash":     contentHash,
+				"original_url":     url,
+				"original_title":   title,
+				"translated_title": translatedTitle,
+				"summary":          summary,
+				"source_name":      sourceName,
+				"published_at":     publishedAt,
+				"processed_at":     processedAt,
+				"sentiment":        sentiment,
+				"impact_level":     impactLevel,
+				"currency_pairs":   currencyPairs,
 			})
 		}
 
