@@ -1,7 +1,9 @@
 import { Client } from 'discord.js-selfbot-v13';
 import { Streamer, prepareStream, playStream } from '@dank074/discord-video-stream';
 import express from 'express';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 const app = express();
 app.use(express.json());
@@ -13,12 +15,19 @@ const VIDEO_HEIGHT = parseInt(process.env.VIDEO_HEIGHT || '720');
 const VIDEO_FPS = parseInt(process.env.VIDEO_FPS || '30');
 const VIDEO_BITRATE = parseInt(process.env.VIDEO_BITRATE || '2500');
 const H26X_PRESET = (process.env.H26X_PRESET || 'ultrafast') as any;
+const TEMP_DIR = process.env.TEMP_DIR || '/tmp/videos';
+
+// Ensure temp directory exists
+if (!fs.existsSync(TEMP_DIR)) {
+    fs.mkdirSync(TEMP_DIR, { recursive: true });
+}
 
 const activeStreams = new Map<string, {
     controller: AbortController;
     title: string;
     url: string;
     startedAt: Date;
+    videoPath?: string;
 }>();
 
 let client: Client;
@@ -32,38 +41,85 @@ async function initClient(): Promise<void> {
     console.log(`[VIDEO] Logged in as ${client.user?.tag}`);
 }
 
-function getYtDlpUrl(url: string): { videoUrl: string; title: string } {
-    try {
+function downloadVideo(url: string): Promise<{ videoPath: string; title: string }> {
+    return new Promise((resolve, reject) => {
+        try {
+            // Get title first
+            console.log(`[VIDEO] Fetching video title...`);
+            const titleOutput = execSync(
+                `yt-dlp --no-warnings --get-title "${url}"`,
+                { timeout: 10000, encoding: 'utf-8' }
+            );
+            const title = titleOutput.trim();
+            console.log(`[VIDEO] Title: ${title}`);
 
-        const output = execSync(
-            `yt-dlp --no-warnings -f "best[height<=?${VIDEO_HEIGHT}]/bestvideo[height<=?${VIDEO_HEIGHT}]+bestaudio/best" --merge-output-format mp4 --get-url --get-title "${url}"`,
-            { timeout: 30000, encoding: 'utf-8' }
-        );
-        const lines = output.trim().split('\n').filter(l => l.trim());
+            // Generate safe filename
+            const timestamp = Date.now();
+            const safeTitle = title.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+            const videoPath = path.join(TEMP_DIR, `${timestamp}_${safeTitle}.mp4`);
 
-        if (lines.length >= 2) {
-            return { title: lines[0], videoUrl: lines[1] };
+            console.log(`[VIDEO] Downloading video to ${videoPath}...`);
+            
+            // Download video with progress
+            const ytdlp = spawn('yt-dlp', [
+                '--no-warnings',
+                '-f', `bestvideo[height<=?${VIDEO_HEIGHT}]+bestaudio/best[height<=?${VIDEO_HEIGHT}]`,
+                '--merge-output-format', 'mp4',
+                '-o', videoPath,
+                url
+            ]);
+
+            let downloadProgress = '';
+
+            ytdlp.stdout.on('data', (data) => {
+                downloadProgress = data.toString();
+                // Extract percentage if available
+                const match = downloadProgress.match(/(\d+\.\d+)%/);
+                if (match) {
+                    process.stdout.write(`\r[VIDEO] Download progress: ${match[1]}%`);
+                }
+            });
+
+            ytdlp.stderr.on('data', (data) => {
+                const output = data.toString();
+                // Show download progress from stderr as well
+                const match = output.match(/(\d+\.\d+)%/);
+                if (match) {
+                    process.stdout.write(`\r[VIDEO] Download progress: ${match[1]}%`);
+                }
+            });
+
+            ytdlp.on('close', (code) => {
+                console.log(''); // New line after progress
+                if (code === 0) {
+                    console.log(`[VIDEO] Download complete: ${videoPath}`);
+                    resolve({ videoPath, title });
+                } else {
+                    reject(new Error(`yt-dlp download failed with code ${code}`));
+                }
+            });
+
+            ytdlp.on('error', (error) => {
+                reject(new Error(`yt-dlp process error: ${error.message}`));
+            });
+
+        } catch (error: any) {
+            reject(new Error(`Download failed: ${error.message}`));
         }
-        return { title: 'Unknown', videoUrl: lines[0] };
-    } catch (error) {
-        throw new Error(`yt-dlp failed: ${error}`);
-    }
+    });
 }
 
 async function startStream(guildId: string, channelId: string, url: string): Promise<{ title: string }> {
-
+    // Stop existing stream if any
     if (activeStreams.has(guildId)) {
-        stopStreamForGuild(guildId);
+        await stopStreamForGuild(guildId);
         await new Promise(r => setTimeout(r, 1000));
     }
 
-
-    console.log(`[VIDEO] Resolving URL: ${url}`);
-    const { videoUrl, title } = getYtDlpUrl(url);
-    console.log(`[VIDEO] yt-dlp result: title="${title}", videoUrl="${videoUrl}"`);
-    if (!videoUrl || !videoUrl.startsWith('http')) {
-        throw new Error(`yt-dlp did not return a valid direct video URL. Cek apakah video dibatasi, private, atau yt-dlp perlu update.`);
-    }
+    // Download video first
+    console.log(`[VIDEO] Starting download for: ${url}`);
+    const { videoPath, title } = await downloadVideo(url);
+    
     console.log(`[VIDEO] Playing: ${title}`);
 
     await streamer.joinVoice(guildId, channelId);
@@ -77,10 +133,12 @@ async function startStream(guildId: string, channelId: string, url: string): Pro
         controller: abortController,
         title,
         url,
-        startedAt: new Date()
+        startedAt: new Date(),
+        videoPath
     });
 
-    const { command, output, promise } = prepareStream(videoUrl, {
+    // Prepare FFmpeg stream from local file
+    const { command, output, promise } = prepareStream(videoPath, {
         width: VIDEO_WIDTH,
         height: VIDEO_HEIGHT,
         frameRate: VIDEO_FPS,
@@ -119,21 +177,35 @@ async function startStream(guildId: string, channelId: string, url: string): Pro
     return { title };
 }
 
-function stopStreamForGuild(guildId: string): boolean {
+async function stopStreamForGuild(guildId: string): Promise<boolean> {
     const stream = activeStreams.get(guildId);
     if (!stream) return false;
 
     stream.controller.abort();
-    cleanupStream(guildId);
+    await cleanupStream(guildId);
     return true;
 }
 
-function cleanupStream(guildId: string) {
+async function cleanupStream(guildId: string) {
+    const stream = activeStreams.get(guildId);
+    
+    // Delete downloaded video file if exists
+    if (stream?.videoPath && fs.existsSync(stream.videoPath)) {
+        try {
+            fs.unlinkSync(stream.videoPath);
+            console.log(`[VIDEO] Deleted temp file: ${stream.videoPath}`);
+        } catch (e) {
+            console.error(`[VIDEO] Failed to delete temp file: ${e}`);
+        }
+    }
+
     activeStreams.delete(guildId);
+    
     try {
         streamer.stopStream();
         streamer.leaveVoice();
     } catch (e) {
+        // Ignore cleanup errors
     }
 }
 
@@ -158,14 +230,14 @@ app.post('/stream/start', async (req, res) => {
     }
 });
 
-app.post('/stream/stop', (req, res) => {
+app.post('/stream/stop', async (req, res) => {
     const { guild_id } = req.body;
 
     if (!guild_id) {
         return res.status(400).json({ error: 'Missing guild_id' });
     }
 
-    const stopped = stopStreamForGuild(guild_id);
+    const stopped = await stopStreamForGuild(guild_id);
     res.json({ success: stopped, message: stopped ? 'Stream stopped' : 'No active stream' });
 });
 
@@ -176,7 +248,8 @@ app.get('/stream/status', (_req, res) => {
             title: stream.title,
             url: stream.url,
             startedAt: stream.startedAt.toISOString(),
-            duration: Math.floor((Date.now() - stream.startedAt.getTime()) / 1000)
+            duration: Math.floor((Date.now() - stream.startedAt.getTime()) / 1000),
+            hasLocalFile: !!stream.videoPath
         };
     }
     res.json({ active_streams: streams, total: activeStreams.size });
@@ -192,9 +265,35 @@ app.get('/stream/status/:guild_id', (req, res) => {
         title: stream.title,
         url: stream.url,
         startedAt: stream.startedAt.toISOString(),
-        duration: Math.floor((Date.now() - stream.startedAt.getTime()) / 1000)
+        duration: Math.floor((Date.now() - stream.startedAt.getTime()) / 1000),
+        hasLocalFile: !!stream.videoPath
     });
 });
+
+// Cleanup old temp files on startup
+app.get('/cleanup', (_req, res) => {
+    try {
+        const files = fs.readdirSync(TEMP_DIR);
+        let deleted = 0;
+        
+        for (const file of files) {
+            const filePath = path.join(TEMP_DIR, file);
+            const stats = fs.statSync(filePath);
+            const ageHours = (Date.now() - stats.mtimeMs) / (1000 * 60 * 60);
+            
+            // Delete files older than 2 hours
+            if (ageHours > 2) {
+                fs.unlinkSync(filePath);
+                deleted++;
+            }
+        }
+        
+        res.json({ success: true, deleted });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 async function main() {
     if (!BOT_TOKEN) {
@@ -218,11 +317,27 @@ async function main() {
         process.exit(1);
     }
 
+    try {
+        const files = fs.readdirSync(TEMP_DIR);
+        for (const file of files) {
+            const filePath = path.join(TEMP_DIR, file);
+            try {
+                fs.unlinkSync(filePath);
+            } catch (e) {
+                // Ignore errors
+            }
+        }
+        console.log('[VIDEO] Cleaned up temp directory');
+    } catch (e) {
+        console.log('[VIDEO] No temp files to clean up');
+    }
+
     await initClient();
 
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`[VIDEO] API server listening on port ${PORT}`);
         console.log(`[VIDEO] Stream settings: ${VIDEO_WIDTH}x${VIDEO_HEIGHT}@${VIDEO_FPS}fps, ${VIDEO_BITRATE}kbps, preset=${H26X_PRESET}`);
+        console.log(`[VIDEO] Temp directory: ${TEMP_DIR}`);
     });
 }
 
