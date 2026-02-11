@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO calendar_channels (guild_id, channel_id, is_active, mention_everyone)\n            VALUES ($1, $2, TRUE, FALSE)\n            ON CONFLICT(guild_id) DO UPDATE SET channel_id = $2, is_active = TRUE\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3e4e7a82eee3efefcb103fd25a3eaa5264d0dbf141d596deb2ff495d485503ad"
+}

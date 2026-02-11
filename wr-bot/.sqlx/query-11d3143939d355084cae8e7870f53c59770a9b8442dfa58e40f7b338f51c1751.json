@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM calendar_events_sent WHERE sent_at < $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "11d3143939d355084cae8e7870f53c59770a9b8442dfa58e40f7b338f51c1751"
+}

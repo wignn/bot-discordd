@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO stock_news_channels (guild_id, channel_id, is_active)\n            VALUES ($1, $2, TRUE)\n            ON CONFLICT(channel_id) DO UPDATE SET guild_id = $1, is_active = TRUE\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "07eb7f90c52e5abcb0df698622c20a71820ff866bbf0dafe1d23d6651b08791c"
+}
