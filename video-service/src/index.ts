@@ -34,8 +34,9 @@ async function initClient(): Promise<void> {
 
 function getYtDlpUrl(url: string): { videoUrl: string; title: string } {
     try {
+
         const output = execSync(
-            `yt-dlp --no-warnings -f "bestvideo[height<=?${VIDEO_HEIGHT}]+bestaudio/best[height<=?${VIDEO_HEIGHT}]" --get-url --get-title "${url}"`,
+            `yt-dlp --no-warnings -f "best[height<=?${VIDEO_HEIGHT}]/bestvideo[height<=?${VIDEO_HEIGHT}]+bestaudio/best" --merge-output-format mp4 --get-url --get-title "${url}"`,
             { timeout: 30000, encoding: 'utf-8' }
         );
         const lines = output.trim().split('\n').filter(l => l.trim());
@@ -43,7 +44,6 @@ function getYtDlpUrl(url: string): { videoUrl: string; title: string } {
         if (lines.length >= 2) {
             return { title: lines[0], videoUrl: lines[1] };
         }
-        // Fallback: single URL
         return { title: 'Unknown', videoUrl: lines[0] };
     } catch (error) {
         throw new Error(`yt-dlp failed: ${error}`);
@@ -51,14 +51,13 @@ function getYtDlpUrl(url: string): { videoUrl: string; title: string } {
 }
 
 async function startStream(guildId: string, channelId: string, url: string): Promise<{ title: string }> {
-    // Stop existing stream if any
+
     if (activeStreams.has(guildId)) {
         stopStreamForGuild(guildId);
         await new Promise(r => setTimeout(r, 1000));
     }
 
 
-    // Get direct video URL via yt-dlp
     console.log(`[VIDEO] Resolving URL: ${url}`);
     const { videoUrl, title } = getYtDlpUrl(url);
     console.log(`[VIDEO] yt-dlp result: title="${title}", videoUrl="${videoUrl}"`);
@@ -67,11 +66,9 @@ async function startStream(guildId: string, channelId: string, url: string): Pro
     }
     console.log(`[VIDEO] Playing: ${title}`);
 
-    // Join voice channel
     await streamer.joinVoice(guildId, channelId);
     await new Promise(r => setTimeout(r, 500));
 
-    // Create stream (Go Live)
     const udpConn = await streamer.createStream();
 
     const abortController = new AbortController();
@@ -83,7 +80,6 @@ async function startStream(guildId: string, channelId: string, url: string): Pro
         startedAt: new Date()
     });
 
-    // Prepare FFmpeg stream
     const { command, output, promise } = prepareStream(videoUrl, {
         width: VIDEO_WIDTH,
         height: VIDEO_HEIGHT,
@@ -138,7 +134,6 @@ function cleanupStream(guildId: string) {
         streamer.stopStream();
         streamer.leaveVoice();
     } catch (e) {
-        // Ignore cleanup errors
     }
 }
 
@@ -200,8 +195,6 @@ app.get('/stream/status/:guild_id', (req, res) => {
         duration: Math.floor((Date.now() - stream.startedAt.getTime()) / 1000)
     });
 });
-
-// ─── Start ─────────────────────────────────────
 
 async function main() {
     if (!BOT_TOKEN) {
