@@ -57,9 +57,14 @@ async function startStream(guildId: string, channelId: string, url: string): Pro
         await new Promise(r => setTimeout(r, 1000));
     }
 
+
     // Get direct video URL via yt-dlp
     console.log(`[VIDEO] Resolving URL: ${url}`);
     const { videoUrl, title } = getYtDlpUrl(url);
+    console.log(`[VIDEO] yt-dlp result: title="${title}", videoUrl="${videoUrl}"`);
+    if (!videoUrl || !videoUrl.startsWith('http')) {
+        throw new Error(`yt-dlp did not return a valid direct video URL. Cek apakah video dibatasi, private, atau yt-dlp perlu update.`);
+    }
     console.log(`[VIDEO] Playing: ${title}`);
 
     // Join voice channel
