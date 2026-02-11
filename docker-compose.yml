@@ -54,7 +54,6 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/forex
       - NEWS_WS_URL=ws://news-server:8000
       - FOREX_SERVICE_URL=http://news-server:8000
-      - VIDEO_SERVICE_URL=http://video-service:3100
     env_file:
       - ./wr-bot/.env
     tty: true
@@ -63,24 +62,9 @@ services:
         condition: service_healthy
       news-server:
         condition: service_started
-      video-service:
-        condition: service_started
     networks:
       - forex-network
 
-  video-service:
-    build:
-      context: ./video-service
-      dockerfile: ../infrastructure/docker/Dockerfile.stream
-    container_name: video-service
-    image: wign/video-service:latest
-    restart: unless-stopped
-    env_file:
-      - ./video-service/.env
-    ports:
-      - "3100:3100"
-    networks:
-      - forex-network
 
   # lavalink:
   #   image: ghcr.io/lavalink-devs/lavalink:4
