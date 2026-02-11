@@ -5,7 +5,6 @@ use serenity::{CreateEmbed, CreateEmbedFooter, Timestamp};
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, super::Data, Error>;
 
-/// Setup forex news notifications for this channel
 #[poise::command(
     slash_command,
     prefix_command,
@@ -43,7 +42,6 @@ pub async fn forex_setup(
     Ok(())
 }
 
-/// Disable forex news notifications
 #[poise::command(
     slash_command,
     prefix_command,

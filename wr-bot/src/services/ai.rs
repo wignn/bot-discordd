@@ -40,7 +40,7 @@ impl Ai {
     pub async fn call_api(
         &mut self,
         user_input: String,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let client = reqwest::Client::new();
         let url = format!("{}/chat/completions", self.base_url);
 
