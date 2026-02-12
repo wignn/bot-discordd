@@ -28,7 +28,6 @@ func NewServer(hub *ws.Hub, db *pgxpool.Pool, port int, apiKeys string) *Server 
 func (s *Server) Start() error {
 	mux := http.NewServeMux()
 
-	// Health check (no auth)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"status":  "healthy",
@@ -54,8 +53,8 @@ func (s *Server) Start() error {
 	// REST API
 	RegisterNewsRoutes(mux, s.db)
 	RegisterStockRoutes(mux, s.db)
+	RegisterScrapingRoutes(mux)
 
-	// Wrap with auth + CORS
 	handler := corsMiddleware(s.auth.Wrap(mux))
 
 	addr := fmt.Sprintf(":%d", s.port)

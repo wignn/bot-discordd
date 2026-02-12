@@ -1,4 +1,5 @@
 use poise::CreateReply;
+use serde::Deserialize;
 
 use crate::services::gemini::GeminiService;
 use crate::{config::Config, error::BotError};
@@ -21,6 +22,13 @@ fn split_into_chunks(s: &str, max: usize) -> Vec<String> {
     chunks
 }
 
+#[derive(Deserialize)]
+struct ScrapedArticle {
+    title: String,
+    content: String,
+    published_at: Option<String>,
+    tags: Option<Vec<String>>,
+}
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, super::Data, Error>;
 
@@ -61,9 +69,23 @@ pub async fn mean(ctx: Context<'_>) -> Result<(), Error> {
         }
     };
 
-    let title = embed.title.clone().unwrap_or_default();
-    let description = embed.description.clone().unwrap_or_default();
     let url: String = embed.url.clone().unwrap_or_default();
+    let client = reqwest::Client::new();
+
+    let scrape_res = client
+        .post("http://localhost:8000/api/v1/scraping")
+        .json(&serde_json::json!({ "link": url }))
+        .send()
+        .await?;
+
+    if !scrape_res.status().is_success() {
+        ctx.say("Gagal scraping berita").await?;
+        return Ok(());
+    }
+
+    let article: ScrapedArticle = scrape_res.json().await?;
+    let tags = article.tags.clone().unwrap_or_default();
+    let published_at = article.published_at.clone().unwrap_or_default();
 
     const SYS_PROMPT: &str = "Anda adalah analis makroekonomi dan valuta asing profesional.
 Gunakan pendekatan berbasis data, hindari opini spekulatif tanpa dasar.
@@ -74,18 +96,22 @@ Gunakan bahasa formal dan ringkas.
     let analysis_prompt = format!(
         "Analisis berita berikut dan berikan:
 
-1. Ringkasan yang jelas dalam 3-5 kalimat dan mudah di pahami orang awam.
+1. Ringkasan yang jelas dalam 3-5 kalimat dan mudah dipahami orang awam.
 2. Penilaian dampak pasar (jangka pendek dan menengah).
 3. Arah bias jika relevan (bullish/bearish/netral).
 4. Faktor risiko yang perlu dipantau.
-5. Baca berita dari link beritanya
+buat jawabanya jadi paragraf jangan point point dan jangan ulangi kata yang saya kirim
 
 Data Berita:
 Judul: {}
-Deskripsi: {}
-URL: {}
+Tanggal: {}
+Tags: {:?}
+
+Isi Berita:
+{}
+
 ",
-        title, description, url
+        article.title, published_at, tags, article.content
     );
 
     let gemini = GeminiService::new(

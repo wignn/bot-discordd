@@ -57,7 +57,6 @@ pub async fn subscribe(
     Ok(())
 }
 
-/// Unsubscribe this channel from stock news alerts
 #[poise::command(slash_command, required_permissions = "MANAGE_CHANNELS")]
 pub async fn unsubscribe(ctx: Context<'_>) -> Result<(), Error> {
     let pool = ctx.data().db.as_ref();
@@ -87,7 +86,6 @@ pub async fn unsubscribe(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-/// Check stock news subscription status
 #[poise::command(slash_command)]
 pub async fn status(ctx: Context<'_>) -> Result<(), Error> {
     let pool = ctx.data().db.as_ref();
@@ -122,8 +120,6 @@ pub async fn status(ctx: Context<'_>) -> Result<(), Error> {
     ctx.send(poise::CreateReply::default().embed(embed)).await?;
     Ok(())
 }
-
-/// Get latest Indonesian stock news
 #[poise::command(slash_command)]
 pub async fn latest(
     ctx: Context<'_>,

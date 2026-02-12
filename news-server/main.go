@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/wign/news-server/internal/api"
 	"github.com/wign/news-server/internal/collector"
 	"github.com/wign/news-server/internal/config"
@@ -20,6 +21,8 @@ import (
 )
 
 func main() {
+	_ = godotenv.Load()
+
 	cfg := config.Load()
 
 	level := slog.LevelInfo
