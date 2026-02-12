@@ -6,6 +6,7 @@ pub struct Config {
     pub token: String,
     pub client_id: String,
     pub prompt: String,
+    pub scraping_base_url: String,
     pub openrouter_api_key: Option<String>,
     pub openrouter_model: String,
     pub openrouter_base_url: String,
@@ -37,10 +38,15 @@ impl Config {
         let gemini_prompt =
             fs::read_to_string(gemini_prompt_file).unwrap_or_else(|_| String::new());
 
+        let scraping_base_url = env::var("FOREX_SERVICE_URL")
+            .or_else(|_| env::var("SCRAPING_BASE_URL"))
+            .unwrap_or_else(|_| "http://localhost:8000".to_string());
+
         Ok(Self {
             token,
             client_id,
             prompt,
+            scraping_base_url,
             openrouter_api_key,
             openrouter_model,
             openrouter_base_url,
