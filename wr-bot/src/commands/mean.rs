@@ -70,9 +70,12 @@ pub async fn mean(ctx: Context<'_>) -> Result<(), Error> {
     };
 
     let url: String = embed.url.clone().unwrap_or_default();
-    
+
     let client = reqwest::Client::new();
-    let scraping_endpoint = format!("{}/api/v1/scraping", config.scraping_base_url.trim_end_matches('/'));
+    let scraping_endpoint = format!(
+        "{}/api/v1/scraping",
+        config.scraping_base_url.trim_end_matches('/')
+    );
 
     let scrape_res = client
         .post(&scraping_endpoint)
@@ -81,7 +84,13 @@ pub async fn mean(ctx: Context<'_>) -> Result<(), Error> {
         .await?;
 
     if !scrape_res.status().is_success() {
-        ctx.say("Gagal scraping berita").await?;
+        let status = scrape_res.status();
+        let body = scrape_res.text().await.unwrap_or_default();
+        ctx.say(format!(
+            "Gagal scraping berita. Status: {}, Body: {}",
+            status, body
+        ))
+        .await?;
         return Ok(());
     }
 

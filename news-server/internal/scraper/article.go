@@ -27,11 +27,16 @@ type ScrapedArticle struct {
 }
 
 type ArticleScraper struct {
-	client *http.Client
+	client    *http.Client
+	userAgent string
 }
 
 func NewArticleScraper(userAgent string, timeout time.Duration) *ArticleScraper {
+	if userAgent == "" {
+		userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+	}
 	return &ArticleScraper{
+		userAgent: userAgent,
 		client: &http.Client{
 			Timeout: timeout,
 			Transport: &http.Transport{
@@ -54,9 +59,25 @@ func (s *ArticleScraper) Scrape(ctx context.Context, articleURL string) (*Scrape
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
+	
+	req.Header.Set("User-Agent", s.userAgent)
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	req.Header.Set("DNT", "1")
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
+	req.Header.Set("Sec-Fetch-Dest", "document")
+	req.Header.Set("Sec-Fetch-Mode", "navigate")
+	req.Header.Set("Sec-Fetch-Site", "none")
+	req.Header.Set("Sec-Fetch-User", "?1")
+	req.Header.Set("Cache-Control", "max-age=0")
+	
+	// Add referer for the specific domain
+	parsedURL, _ := url.Parse(articleURL)
+	if parsedURL != nil && parsedURL.Host != "" {
+		req.Header.Set("Referer", fmt.Sprintf("%s://%s/", parsedURL.Scheme, parsedURL.Host))
+	}
 
 	resp, err := s.client.Do(req)
 	if err != nil {
