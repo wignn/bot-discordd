@@ -16,55 +16,57 @@ const features = [
         icon: Newspaper,
         title: 'Real-time News',
         description: 'Instant forex news from 6+ sources including Reuters, FXStreet, and Investing.com.',
-        highlight: true
+        highlight: true,
+        color: '#8b5cf6'
     },
     {
         icon: TrendingUp,
         title: 'Live Prices',
         description: 'Check live forex prices for XAU/USD, EUR/USD, GBP/USD with real-time Tiingo data.',
-        highlight: true
+        highlight: true,
+        color: '#06b6d4'
     },
     {
         icon: BarChart3,
         title: 'Chart Analysis',
         description: 'Generate professional candlestick charts with technical indicators via /chart command.',
-        highlight: false
+        color: '#f59e0b'
     },
     {
         icon: Bell,
         title: 'Price Alerts',
         description: 'Set custom price alerts and receive notifications when your target is reached.',
-        highlight: false
+        color: '#34d399'
     },
     {
         icon: Music,
         title: 'Music Player',
         description: 'Full-featured music player with queue management and Spotify integration.',
-        highlight: false
+        color: '#f472b6'
     },
     {
         icon: Bot,
         title: 'AI Assistant',
         description: 'Powered by Gemini AI for trading insights, analysis, and conversation.',
-        highlight: false
+        color: '#a78bfa'
     },
     {
         icon: Shield,
         title: 'Moderation',
         description: 'Complete suite including warn, kick, ban, and timeout commands.',
-        highlight: false
+        color: '#60a5fa'
     },
     {
         icon: Clock,
         title: '24/7 Operation',
         description: 'Deployed on VPS with automatic restart and continuous monitoring.',
-        highlight: false
+        color: '#fbbf24'
     },
     {
         icon: Zap,
         title: 'High Performance',
         description: 'Built with Rust for maximum speed and minimal resource usage.',
-        highlight: false
+        color: '#f87171'
     }
 ];
 
@@ -74,7 +76,7 @@ export default function Features() {
             <div className="container">
                 <div className="section-header">
                     <h2>Powerful <span className="gradient-text">Features</span></h2>
-                    <p>Comprehensive forex trading tools in one Discord bot</p>
+                    <p>Everything you need for forex trading, packed into one smart Discord bot</p>
                 </div>
 
                 <div className="features-grid">
@@ -82,7 +84,10 @@ export default function Features() {
                         <div
                             key={index}
                             className={`feature-card ${feature.highlight ? 'feature-highlight' : ''}`}
-                            style={{ animationDelay: `${index * 0.05}s` }}
+                            style={{
+                                animationDelay: `${index * 0.05}s`,
+                                '--feature-color': feature.color
+                            }}
                         >
                             <div className="feature-icon">
                                 <feature.icon size={22} strokeWidth={1.5} />

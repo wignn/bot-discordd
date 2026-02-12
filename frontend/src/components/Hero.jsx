@@ -6,14 +6,17 @@ export default function Hero() {
         <section className="hero">
             {/* Animated Background */}
             <div className="hero-bg">
-                <div className="hero-grid"></div>
-                <div className="hero-glow"></div>
+                <div className="hero-mesh"></div>
+                <div className="hero-orb hero-orb-1"></div>
+                <div className="hero-orb hero-orb-2"></div>
+                <div className="hero-orb hero-orb-3"></div>
                 <div className="hero-particles">
-                    {[...Array(15)].map((_, i) => (
+                    {[...Array(20)].map((_, i) => (
                         <div key={i} className="particle" style={{
-                            '--delay': `${Math.random() * 5}s`,
+                            '--delay': `${Math.random() * 6}s`,
                             '--x': `${Math.random() * 100}%`,
-                            '--duration': `${4 + Math.random() * 4}s`
+                            '--duration': `${5 + Math.random() * 5}s`,
+                            '--size': `${2 + Math.random() * 3}px`
                         }}></div>
                     ))}
                 </div>
@@ -23,20 +26,20 @@ export default function Hero() {
                 {/* Badge */}
                 <div className="hero-badge animate-fade-in">
                     <Sparkles size={14} />
-                    <span>Private Trading Bot</span>
+                    <span>Fio Trading Assistant</span>
                 </div>
 
                 {/* Title */}
                 <h1 className="hero-title animate-fade-in" style={{ animationDelay: '0.1s' }}>
-                    Real-time Forex News
+                    Your AI-Powered
                     <br />
-                    <span className="gradient-text">Delivered to Discord</span>
+                    <span className="gradient-text">Trading Companion</span>
                 </h1>
 
                 {/* Description */}
                 <p className="hero-description animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                    Automated forex news monitoring with instant Discord notifications,
-                    live gold prices, chart analysis, and AI-powered insights.
+                    Real-time forex & stock news, live prices, chart analysis, and
+                    AI-powered insights — all delivered instantly to your Discord server.
                 </p>
 
                 {/* CTAs */}
@@ -59,18 +62,18 @@ export default function Hero() {
                 {/* Stats */}
                 <div className="hero-stats animate-fade-in" style={{ animationDelay: '0.4s' }}>
                     <div className="stat">
-                        <span className="stat-value">6+</span>
-                        <span className="stat-label">News Sources</span>
+                        <span className="stat-value">AI</span>
+                        <span className="stat-label">Powered</span>
+                    </div>
+                    <div className="stat-divider"></div>
+                    <div className="stat">
+                        <span className="stat-value">Real-time</span>
+                        <span className="stat-label">News Feed</span>
                     </div>
                     <div className="stat-divider"></div>
                     <div className="stat">
                         <span className="stat-value">24/7</span>
-                        <span className="stat-label">Uptime</span>
-                    </div>
-                    <div className="stat-divider"></div>
-                    <div className="stat">
-                        <span className="stat-value">Rust</span>
-                        <span className="stat-label">Performance</span>
+                        <span className="stat-label">Active</span>
                     </div>
                 </div>
             </div>

@@ -1,7 +1,17 @@
 .footer {
     padding: 4rem 0 2rem;
     background: var(--bg-primary);
-    border-top: 1px solid var(--border-color);
+    position: relative;
+}
+
+.footer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-accent), transparent);
 }
 
 .footer-content {
@@ -11,10 +21,26 @@
     margin-bottom: 3rem;
 }
 
-.footer-brand h3 {
+.footer-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.footer-logo-icon {
     font-size: 1.125rem;
+    background: linear-gradient(135deg, var(--accent-primary), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.footer-brand h3 {
+    font-size: 1.25rem;
     color: var(--text-primary);
-    margin-bottom: 0.625rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
 }
 
 .footer-brand p {
@@ -50,7 +76,7 @@
 }
 
 .footer-links a:hover {
-    color: var(--accent-primary);
+    color: var(--accent-secondary);
 }
 
 .tech-tags {
@@ -61,9 +87,9 @@
 
 .tech-tag {
     padding: 0.3rem 0.625rem;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--border-color);
-    border-radius: 5px;
+    border-radius: 6px;
     font-size: 0.75rem;
     color: var(--text-secondary);
     transition: all var(--transition-fast);
@@ -72,6 +98,7 @@
 .tech-tag:hover {
     border-color: var(--tech-color);
     color: var(--tech-color);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 /* Bottom */
@@ -105,7 +132,7 @@
 }
 
 .footer-github:hover {
-    color: var(--text-primary);
+    color: var(--accent-secondary);
 }
 
 @media (max-width: 768px) {
@@ -113,6 +140,10 @@
         grid-template-columns: 1fr;
         gap: 2rem;
         text-align: center;
+    }
+
+    .footer-logo {
+        justify-content: center;
     }
 
     .footer-brand p {

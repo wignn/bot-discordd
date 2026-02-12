@@ -10,9 +10,10 @@
     max-width: 600px;
     margin: 0 auto 3rem;
     padding: 1.5rem;
-    background: var(--bg-card);
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: 14px;
     text-align: left;
 }
 
@@ -37,23 +38,39 @@
 .market-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1.5rem;
+    gap: 1.25rem;
     max-width: 900px;
     margin: 0 auto;
 }
 
 .market-card {
-    padding: 1.5rem;
-    background: var(--bg-card);
+    padding: 1.75rem;
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    text-align: center;
+    border-left: 3px solid var(--card-accent, var(--accent-primary));
+    border-radius: 14px;
+    text-align: left;
     transition: all var(--transition-normal);
 }
 
 .market-card:hover {
-    border-color: var(--border-accent);
-    transform: translateY(-2px);
+    border-color: rgba(139, 92, 246, 0.15);
+    border-left-color: var(--card-accent, var(--accent-primary));
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.market-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(139, 92, 246, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--card-accent, var(--accent-primary));
+    margin-bottom: 1rem;
 }
 
 .market-card h3 {
@@ -64,7 +81,7 @@
 }
 
 .market-card p {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--text-secondary);
     line-height: 1.5;
 }

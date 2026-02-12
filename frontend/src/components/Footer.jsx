@@ -1,11 +1,11 @@
-import { Github, Heart, ExternalLink } from 'lucide-react';
+import { Github, ExternalLink } from 'lucide-react';
 import './Footer.css';
 
 export default function Footer() {
     const techStack = [
         { name: 'Rust', color: '#dea584' },
+        { name: 'Go', color: '#00add8' },
         { name: 'Python', color: '#3776ab' },
-        { name: 'FastAPI', color: '#009688' },
         { name: 'PostgreSQL', color: '#336791' },
         { name: 'Redis', color: '#dc382d' },
         { name: 'Docker', color: '#2496ed' },
@@ -16,15 +16,18 @@ export default function Footer() {
             <div className="container">
                 <div className="footer-content">
                     <div className="footer-brand">
-                        <h3>Forex News Bot</h3>
-                        <p>Real-time forex news monitoring platform with automatic Discord notifications.</p>
+                        <div className="footer-logo">
+                            <span className="footer-logo-icon">✦</span>
+                            <h3>Fio</h3>
+                        </div>
+                        <p>AI-powered trading companion with real-time forex & stock news for Discord.</p>
                     </div>
 
                     <div className="footer-links">
                         <h4>Navigation</h4>
                         <ul>
                             <li><a href="#features">Features</a></li>
-                            <li><a href="#prices">Live Prices</a></li>
+                            <li><a href="#prices">Market</a></li>
                             <li><a href="#news">News Feed</a></li>
                             <li>
                                 <a href="https://github.com/wignn/bot-discordd" target="_blank" rel="noopener noreferrer">
@@ -52,7 +55,7 @@ export default function Footer() {
 
                 <div className="footer-bottom">
                     <div className="footer-copyright">
-                        <span>© 2026 Forex News Bot</span>
+                        <span>© 2026 Fio</span>
                         <span className="footer-divider">·</span>
                         <span>Made in Indonesia</span>
                     </div>

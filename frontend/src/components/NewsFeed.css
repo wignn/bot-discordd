@@ -50,11 +50,13 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.625rem 1.25rem;
-    background: var(--bg-card);
+    background: var(--bg-glass);
+    backdrop-filter: blur(8px);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 0.875rem;
     font-weight: 500;
+    font-family: var(--font-sans);
     color: var(--text-secondary);
     cursor: pointer;
     transition: all var(--transition-normal);
@@ -66,9 +68,9 @@
 }
 
 .news-tab.active {
-    background: var(--accent-primary);
+    background: linear-gradient(135deg, var(--accent-primary), #7c3aed);
     border-color: var(--accent-primary);
-    color: white;
+    color: #fff;
 }
 
 .tab-count {
@@ -89,8 +91,8 @@
 }
 
 .news-pair.ticker {
-    background: rgba(88, 101, 242, 0.15);
-    color: var(--accent-primary);
+    background: rgba(139, 92, 246, 0.12);
+    color: var(--accent-secondary);
     font-weight: 600;
 }
 
@@ -103,8 +105,10 @@
 }
 
 .news-item {
-    background: var(--bg-card);
+    background: var(--bg-glass);
+    backdrop-filter: blur(8px);
     border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-primary);
     border-radius: 14px;
     padding: 1.25rem 1.5rem;
     transition: all var(--transition-normal);
@@ -113,8 +117,10 @@
 }
 
 .news-item:hover {
-    border-color: var(--border-accent);
+    border-color: rgba(139, 92, 246, 0.15);
+    border-left-color: var(--accent-secondary);
     transform: translateX(4px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
 }
 
 .news-meta {
@@ -127,7 +133,7 @@
 .news-source {
     font-size: 0.7rem;
     font-weight: 600;
-    color: var(--accent-primary);
+    color: var(--accent-secondary);
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
@@ -174,7 +180,7 @@
 
 .news-impact {
     padding: 0.2rem 0.5rem;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.65rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -182,17 +188,17 @@
 }
 
 .impact-high {
-    background: rgba(239, 68, 68, 0.12);
+    background: rgba(248, 113, 113, 0.12);
     color: var(--danger);
 }
 
 .impact-medium {
-    background: rgba(245, 158, 11, 0.12);
+    background: rgba(251, 191, 36, 0.12);
     color: var(--warning);
 }
 
 .impact-low {
-    background: rgba(34, 197, 94, 0.12);
+    background: rgba(52, 211, 153, 0.12);
     color: var(--success);
 }
 
@@ -224,9 +230,9 @@
 }
 
 .news-pair {
-    padding: 0.2rem 0.4rem;
+    padding: 0.2rem 0.5rem;
     background: var(--bg-tertiary);
-    border-radius: 3px;
+    border-radius: 5px;
     font-size: 0.65rem;
     font-family: var(--font-mono);
     color: var(--text-secondary);
