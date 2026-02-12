@@ -69,14 +69,17 @@ pub async fn mean(ctx: Context<'_>) -> Result<(), Error> {
         }
     };
 
+    
     let url: String = embed.url.clone().unwrap_or_default();
 
+    println!("url: {}", url);
     let client = reqwest::Client::new();
     let scraping_endpoint = format!(
         "{}/api/v1/scraping",
         config.scraping_base_url.trim_end_matches('/')
     );
 
+    
     let scrape_res = client
         .post(&scraping_endpoint)
         .json(&serde_json::json!({ "link": url }))
