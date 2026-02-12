@@ -60,6 +60,7 @@ func (s *ArticleScraper) Scrape(ctx context.Context, articleURL string) (*Scrape
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	
+	// Set comprehensive headers to appear as a real browser
 	req.Header.Set("User-Agent", s.userAgent)
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
@@ -73,7 +74,6 @@ func (s *ArticleScraper) Scrape(ctx context.Context, articleURL string) (*Scrape
 	req.Header.Set("Sec-Fetch-User", "?1")
 	req.Header.Set("Cache-Control", "max-age=0")
 	
-	// Add referer for the specific domain
 	parsedURL, _ := url.Parse(articleURL)
 	if parsedURL != nil && parsedURL.Host != "" {
 		req.Header.Set("Referer", fmt.Sprintf("%s://%s/", parsedURL.Scheme, parsedURL.Host))
@@ -94,13 +94,22 @@ func (s *ArticleScraper) Scrape(ctx context.Context, articleURL string) (*Scrape
 		return nil, fmt.Errorf("parse html: %w", err)
 	}
 
+	logPageStructure(doc)
+
 	doc.Find("script, style, nav, header, footer, aside, .ad, .advertisement, .social-share").Remove()
 
 	title := extractTitle(doc)
 	content := extractContent(doc)
 
+	if title == "" {
+		slog.Warn("failed to extract title", "url", articleURL)
+	}
+	if content == "" {
+		slog.Warn("failed to extract content", "url", articleURL)
+	}
+
 	if title == "" || content == "" {
-		return nil, fmt.Errorf("could not extract title or content")
+		return nil, fmt.Errorf("could not extract title or content (title=%t, content=%t)", title != "", content != "")
 	}
 
 	content = htmlutil.CleanContent(content)
@@ -117,7 +126,38 @@ func (s *ArticleScraper) Scrape(ctx context.Context, articleURL string) (*Scrape
 	}, nil
 }
 
+func logPageStructure(doc *goquery.Document) {
+	doc.Find("h1").Each(func(i int, s *goquery.Selection) {
+		class := s.AttrOr("class", "")
+		id := s.AttrOr("id", "")
+		text := strings.TrimSpace(s.Text())
+		if len(text) > 100 {
+			text = text[:100] + "..."
+		}
+		slog.Debug("found h1", "index", i, "class", class, "id", id, "text", text)
+	})
+
+	doc.Find("article, main").Each(func(i int, s *goquery.Selection) {
+		tag := goquery.NodeName(s)
+		class := s.AttrOr("class", "")
+		id := s.AttrOr("id", "")
+		pCount := s.Find("p").Length()
+		slog.Debug("found content container", "tag", tag, "class", class, "id", id, "paragraphs", pCount)
+	})
+
+	if ogTitle, exists := doc.Find("meta[property='og:title']").Attr("content"); exists {
+		slog.Debug("found og:title", "content", ogTitle)
+	}
+}
+
 func extractTitle(doc *goquery.Document) string {
+	if content, exists := doc.Find("meta[property='og:title']").First().Attr("content"); exists && content != "" {
+		return strings.TrimSpace(content)
+	}
+	if content, exists := doc.Find("meta[name='twitter:title']").First().Attr("content"); exists && content != "" {
+		return strings.TrimSpace(content)
+	}
+
 	selectors := []string{
 		"article h1",
 		"h1.article-title",
@@ -125,6 +165,10 @@ func extractTitle(doc *goquery.Document) string {
 		"h1.post-title",
 		".article-header h1",
 		"h1[itemprop='headline']",
+		".fxs_headline h1",
+		".fxs_article_title",
+		"main h1",
+		".content h1",
 	}
 
 	for _, sel := range selectors {
@@ -133,11 +177,19 @@ func extractTitle(doc *goquery.Document) string {
 		}
 	}
 
-	if content, exists := doc.Find("meta[property='og:title']").First().Attr("content"); exists {
-		return strings.TrimSpace(content)
+	if text := strings.TrimSpace(doc.Find("h1").First().Text()); text != "" {
+		return text
 	}
 
-	return strings.TrimSpace(doc.Find("title").First().Text())
+	title := strings.TrimSpace(doc.Find("title").First().Text())
+
+	for _, sep := range []string{" | ", " - ", " :: "} {
+		if idx := strings.Index(title, sep); idx > 0 {
+			return strings.TrimSpace(title[:idx])
+		}
+	}
+	
+	return title
 }
 
 func extractContent(doc *goquery.Document) string {
@@ -149,6 +201,10 @@ func extractContent(doc *goquery.Document) string {
 		".article-content",
 		".story-body",
 		"[itemprop='articleBody']",
+		".fxs_article_content",
+		".post-body",
+		"main article",
+		".entry",
 	}
 
 	for _, sel := range selectors {
@@ -162,9 +218,9 @@ func extractContent(doc *goquery.Document) string {
 	}
 
 	var paragraphs []string
-	doc.Find("article p").Each(func(_ int, s *goquery.Selection) {
+	doc.Find("article p, .article p, main p").Each(func(_ int, s *goquery.Selection) {
 		text := strings.TrimSpace(s.Text())
-		if text != "" {
+		if text != "" && len(text) > 20 {
 			paragraphs = append(paragraphs, text)
 		}
 	})
@@ -175,8 +231,21 @@ func extractContent(doc *goquery.Document) string {
 	var longParagraphs []string
 	doc.Find("p").Each(func(_ int, s *goquery.Selection) {
 		text := strings.TrimSpace(s.Text())
-		if len(text) > 50 {
-			longParagraphs = append(longParagraphs, text)
+		if len(text) > 50 && !strings.Contains(text, "©") && !strings.Contains(text, "cookie") {
+			parent := s.Parent()
+			parentClass := parent.AttrOr("class", "")
+			parentId := parent.AttrOr("id", "")
+			
+			if !strings.Contains(parentClass, "nav") && 
+			   !strings.Contains(parentClass, "menu") &&
+			   !strings.Contains(parentClass, "footer") &&
+			   !strings.Contains(parentClass, "header") &&
+			   !strings.Contains(parentClass, "sidebar") &&
+			   !strings.Contains(parentId, "nav") &&
+			   !strings.Contains(parentId, "menu") &&
+			   !strings.Contains(parentId, "footer") {
+				longParagraphs = append(longParagraphs, text)
+			}
 		}
 	})
 
