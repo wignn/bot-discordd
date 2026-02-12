@@ -73,7 +73,7 @@ pub async fn mean(ctx: Context<'_>) -> Result<(), Error> {
     let client = reqwest::Client::new();
 
     let scrape_res = client
-        .post("http://localhost:8000/api/v1/scraping")
+        .post("http://news-server:8000/api/v1/scraping")
         .json(&serde_json::json!({ "link": url }))
         .send()
         .await?;
