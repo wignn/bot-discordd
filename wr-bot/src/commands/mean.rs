@@ -69,8 +69,27 @@ pub async fn mean(ctx: Context<'_>) -> Result<(), Error> {
         }
     };
 
-    
-    let url: String = embed.url.clone().unwrap_or_default();
+    let url: String = if let Some(embed_url) = &embed.url {
+        embed_url.clone()
+    } else if let Some(field) = embed.fields.iter().find(|f| f.name == "Sumber") {
+        let value = &field.value;
+        if let Some(start) = value.find("](") {
+            if let Some(end) = value[start + 2..].find(')') {
+                value[start + 2..start + 2 + end].to_string()
+            } else {
+                String::new()
+            }
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
+    };
+
+    if url.is_empty() {
+        ctx.say("Embed tidak memiliki URL yang valid").await?;
+        return Ok(());
+    }
 
     println!("url: {}", url);
     let client = reqwest::Client::new();
