@@ -65,25 +65,28 @@ impl StockNewsWsClient {
 
     pub async fn connect_and_listen(&self) -> Result<(), BotError> {
         let url = format!("{}/api/v1/stock/ws", self.ws_url.trim_end_matches('/'));
-        
+
         loop {
             println!("[STOCK-WS] Connecting to {}", url);
-            
+
             match connect_async(&url).await {
                 Ok((ws_stream, _)) => {
                     println!("[STOCK-WS] Connected successfully");
-                    
+
                     let (mut write, mut read) = ws_stream.split();
-                    
+
                     let subscribe_msg = serde_json::json!({
                         "action": "subscribe",
                         "channels": ["stock.new", "stock.high_impact"]
                     });
-                    
-                    if let Err(e) = write.send(WsMessage::Text(subscribe_msg.to_string().into())).await {
+
+                    if let Err(e) = write
+                        .send(WsMessage::Text(subscribe_msg.to_string().into()))
+                        .await
+                    {
                         eprintln!("[STOCK-WS] Failed to subscribe: {}", e);
                     }
-                    
+
                     while let Some(msg) = read.next().await {
                         match msg {
                             Ok(WsMessage::Text(text)) => {
@@ -108,7 +111,7 @@ impl StockNewsWsClient {
                     eprintln!("[STOCK-WS] Connection failed: {}", e);
                 }
             }
-            
+
             println!("[STOCK-WS] Reconnecting in 10 seconds...");
             tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
         }
@@ -118,9 +121,18 @@ impl StockNewsWsClient {
         if let Ok(event) = serde_json::from_str::<StockNewsEvent>(text) {
             match event.event.as_str() {
                 "stock.news.new" | "stock.news.high_impact" => {
-                    println!("[STOCK-WS] Received stock news: {}", event.data.article.title);
+                    println!(
+                        "[STOCK-WS] Received stock news: {}",
+                        event.data.article.title
+                    );
                     if let (Some(http), Some(pool)) = (&self.http, &self.db_pool) {
-                        self.broadcast_stock_news(&event.data.article, event.event.as_str(), http, pool).await;
+                        self.broadcast_stock_news(
+                            &event.data.article,
+                            event.event.as_str(),
+                            http,
+                            pool,
+                        )
+                        .await;
                     }
                 }
                 _ => {}
@@ -128,12 +140,19 @@ impl StockNewsWsClient {
         }
     }
 
-    async fn broadcast_stock_news(&self, data: &StockNewsData, event_type: &str, http: &Arc<Http>, pool: &Arc<sqlx::PgPool>) {
+    async fn broadcast_stock_news(
+        &self,
+        data: &StockNewsData,
+        event_type: &str,
+        http: &Arc<Http>,
+        pool: &Arc<sqlx::PgPool>,
+    ) {
         let channels: Vec<(i64, bool)> = match sqlx::query_as(
-            "SELECT channel_id, mention_everyone FROM stock_news_channels WHERE is_active = TRUE"
+            "SELECT channel_id, mention_everyone FROM stock_news_channels WHERE is_active = TRUE",
         )
         .fetch_all(pool.as_ref())
-        .await {
+        .await
+        {
             Ok(c) => c,
             Err(e) => {
                 eprintln!("[STOCK-WS] Failed to get channels: {}", e);
@@ -146,16 +165,16 @@ impl StockNewsWsClient {
         }
 
         let embed = self.build_stock_embed(data);
-        
+
         for (channel_id, mention_everyone) in &channels {
             let channel = ChannelId::new(*channel_id as u64);
-            
+
             let mut message = CreateMessage::new().embed(embed.clone());
-            
+
             if event_type == "stock.news.high_impact" && *mention_everyone {
                 message = message.content("@everyone **HIGH IMPACT STOCK NEWS**");
             }
-            
+
             if let Err(e) = channel.send_message(http, message).await {
                 eprintln!("[STOCK-WS] Failed to send to channel {}: {}", channel_id, e);
             }
@@ -163,11 +182,10 @@ impl StockNewsWsClient {
     }
 
     fn build_stock_embed(&self, data: &StockNewsData) -> CreateEmbed {
-
         let color = match data.sentiment.as_deref() {
             Some("bullish") => 0x00FF00,
             Some("bearish") => 0xFF0000,
-            _ => 0x2962FF, 
+            _ => 0x2962FF,
         };
 
         let impact_bar = match data.impact_level.as_deref() {
@@ -186,15 +204,29 @@ impl StockNewsWsClient {
         };
 
         let tickers_str = if !data.tickers.is_empty() {
-            format!(" | {}", data.tickers.iter().take(5).cloned().collect::<Vec<_>>().join(", "))
+            format!(
+                " | {}",
+                data.tickers
+                    .iter()
+                    .take(5)
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
         } else {
             String::new()
         };
 
         let wib_offset = chrono::FixedOffset::east_opt(7 * 3600).unwrap();
-        let time_str = data.published_at.as_ref()
+        let time_str = data
+            .published_at
+            .as_ref()
             .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
-            .map(|dt| dt.with_timezone(&wib_offset).format("%H:%M WIB").to_string())
+            .map(|dt| {
+                dt.with_timezone(&wib_offset)
+                    .format("%H:%M WIB")
+                    .to_string()
+            })
             .unwrap_or_default();
 
         let mut embed = CreateEmbed::new()
@@ -203,12 +235,19 @@ impl StockNewsWsClient {
             .color(color)
             .footer(CreateEmbedFooter::new(format!(
                 "Stock Alert | {} | {}",
-                data.source_name,
-                time_str
+                data.source_name, time_str
             )));
 
         embed = embed
-            .field("Waktu", if time_str.is_empty() { "N/A" } else { &time_str }, true)
+            .field(
+                "Waktu",
+                if time_str.is_empty() {
+                    "N/A"
+                } else {
+                    &time_str
+                },
+                true,
+            )
             .field("Impact", impact_bar, true);
 
         let url = data.original_url.as_deref().unwrap_or(&data.source_url);

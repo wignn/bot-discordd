@@ -34,6 +34,9 @@ services:
       - PORT=8000
       - API_KEYS=${API_KEYS:-}
       - LOG_LEVEL=INFO
+      - INFOWAY_API_KEY=${INFOWAY_API_KEY:-}
+      - INFOWAY_FOREX_SYMBOLS=${INFOWAY_FOREX_SYMBOLS:-EURUSD,GBPUSD,USDJPY,XAUUSD}
+      - INFOWAY_CRYPTO_SYMBOLS=${INFOWAY_CRYPTO_SYMBOLS:-BTCUSDT,ETHUSDT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,7 +67,6 @@ services:
         condition: service_started
     networks:
       - forex-network
-
 
   # lavalink:
   #   image: ghcr.io/lavalink-devs/lavalink:4

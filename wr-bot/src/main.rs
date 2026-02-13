@@ -8,7 +8,7 @@ use songbird::SerenityInit;
 use std::collections::HashSet;
 use std::env;
 use worm::commands::{
-    Data, admin, ai, calendar, forex, general, mean, moderation, music, ping, stock, sys,
+    Data, admin, ai, calendar, forex, general, market, mean, moderation, music, ping, stock, sys,
 };
 use worm::config::Config;
 use worm::error::BotError;
@@ -150,6 +150,9 @@ async fn main() -> Result<(), BotError> {
                 stock::search(),
                 stock::market(),
                 mean::mean(),
+                // Market price commands
+                market::price(),
+                market::prices(),
             ],
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("!".into()),
@@ -246,10 +249,14 @@ async fn main() -> Result<(), BotError> {
                 .sum();
             let total_server: u64 = cache.guilds().len() as u64;
 
-            let activities = vec![
+            let mut activities = vec![
                 ActivityData::custom(format!("With {} users!", total_users)),
                 ActivityData::custom(format!("In {} server!", total_server)),
             ];
+
+            if let Some(xau) = worm::services::market_ws::get_xauusd_display() {
+                activities.push(ActivityData::custom(xau));
+            }
 
             let runners = shard_manager.runners.lock().await;
             for (_, runner) in runners.iter() {

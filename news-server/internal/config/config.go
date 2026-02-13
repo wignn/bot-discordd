@@ -17,6 +17,10 @@ type Config struct {
 	StockFetchSec    int
 	CalendarCheckSec int
 	LogLevel         string
+
+	InfowayAPIKey        string
+	InfowayForexSymbols  string
+	InfowayCryptoSymbols string
 }
 
 func Load() *Config {
@@ -31,6 +35,10 @@ func Load() *Config {
 		StockFetchSec:    getEnvInt("STOCK_FETCH_SEC", 20),
 		CalendarCheckSec: getEnvInt("CALENDAR_CHECK_SEC", 60),
 		LogLevel:         getEnv("LOG_LEVEL", "INFO"),
+
+		InfowayAPIKey:        getEnv("INFOWAY_API_KEY", ""),
+		InfowayForexSymbols:  getEnv("INFOWAY_FOREX_SYMBOLS", "EURUSD,GBPUSD,USDJPY,XAUUSD"),
+		InfowayCryptoSymbols: getEnv("INFOWAY_CRYPTO_SYMBOLS", "BTCUSDT,ETHUSDT"),
 	}
 
 	cfg.DatabaseURL = strings.Replace(cfg.DatabaseURL, "postgresql+asyncpg://", "postgres://", 1)

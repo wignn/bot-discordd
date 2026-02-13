@@ -98,7 +98,6 @@ pub async fn mean(ctx: Context<'_>) -> Result<(), Error> {
         config.scraping_base_url.trim_end_matches('/')
     );
 
-    
     let scrape_res = client
         .post(&scraping_endpoint)
         .json(&serde_json::json!({ "link": url }))

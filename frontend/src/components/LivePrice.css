@@ -3,85 +3,297 @@
     position: relative;
 }
 
-.price-notice {
+.price-status {
     display: flex;
-    gap: 1rem;
-    align-items: flex-start;
-    max-width: 600px;
-    margin: 0 auto 3rem;
-    padding: 1.5rem;
-    background: var(--bg-glass);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    text-align: left;
+    justify-content: center;
+    margin-bottom: 2rem;
 }
 
-.price-notice svg {
-    flex-shrink: 0;
-    color: var(--accent-primary);
-}
-
-.price-notice h3 {
-    font-size: 1rem;
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.875rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
     font-weight: 600;
-    margin-bottom: 0.375rem;
-    color: var(--text-primary);
+    letter-spacing: 0.04em;
 }
 
-.price-notice p {
-    font-size: 0.875rem;
+.status-live {
+    background: rgba(52, 211, 153, 0.1);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    color: var(--success);
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.status-offline {
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    color: var(--danger);
+}
+
+.price-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 3rem 0;
     color: var(--text-secondary);
-    line-height: 1.5;
 }
 
-.market-cards {
+.spin {
+    animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Price Grid */
+.price-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1.25rem;
-    max-width: 900px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    max-width: 1000px;
     margin: 0 auto;
 }
 
-.market-card {
-    padding: 1.75rem;
+/* Price Card */
+.price-card {
+    padding: 1.25rem 1.5rem;
     background: var(--bg-glass);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
     border: 1px solid var(--border-color);
-    border-left: 3px solid var(--card-accent, var(--accent-primary));
-    border-radius: 14px;
-    text-align: left;
-    transition: all var(--transition-normal);
+    border-radius: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
 }
 
-.market-card:hover {
-    border-color: rgba(139, 92, 246, 0.15);
-    border-left-color: var(--card-accent, var(--accent-primary));
+.price-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--border-color);
+    transition: background 0.3s ease;
+}
+
+.price-card.up::before {
+    background: linear-gradient(90deg, transparent, var(--success), transparent);
+}
+
+.price-card.down::before {
+    background: linear-gradient(90deg, transparent, var(--danger), transparent);
+}
+
+.price-card:hover {
+    border-color: rgba(139, 92, 246, 0.2);
     transform: translateY(-3px);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
 }
 
-.market-card-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: rgba(139, 92, 246, 0.1);
+.price-card.flash {
+    animation: flash-card 0.6s ease;
+}
+
+@keyframes flash-card {
+    0% {
+        background: var(--bg-glass);
+    }
+
+    30% {
+        background: rgba(139, 92, 246, 0.08);
+    }
+
+    100% {
+        background: var(--bg-glass);
+    }
+}
+
+.price-card.flash.up {
+    animation-name: flash-up;
+}
+
+.price-card.flash.down {
+    animation-name: flash-down;
+}
+
+@keyframes flash-up {
+    0% {
+        background: var(--bg-glass);
+    }
+
+    30% {
+        background: rgba(52, 211, 153, 0.08);
+    }
+
+    100% {
+        background: var(--bg-glass);
+    }
+}
+
+@keyframes flash-down {
+    0% {
+        background: var(--bg-glass);
+    }
+
+    30% {
+        background: rgba(248, 113, 113, 0.08);
+    }
+
+    100% {
+        background: var(--bg-glass);
+    }
+}
+
+/* Card Header */
+.price-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 0.75rem;
+}
+
+.price-icon {
+    font-size: 1.25rem;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--card-accent, var(--accent-primary));
-    margin-bottom: 1rem;
+    background: rgba(139, 92, 246, 0.08);
+    border-radius: 10px;
+    flex-shrink: 0;
 }
 
-.market-card h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
+.price-label {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.price-symbol {
+    font-size: 0.9rem;
+    font-weight: 700;
     color: var(--text-primary);
+    letter-spacing: 0.02em;
 }
 
-.market-card p {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    line-height: 1.5;
+.price-name {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.price-direction {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.price-direction.dir-up {
+    background: rgba(52, 211, 153, 0.12);
+    color: var(--success);
+}
+
+.price-direction.dir-down {
+    background: rgba(248, 113, 113, 0.12);
+    color: var(--danger);
+}
+
+.price-direction.dir-neutral {
+    background: rgba(156, 163, 175, 0.1);
+    color: var(--text-muted);
+}
+
+/* Price Value */
+.price-value {
+    margin-bottom: 0.5rem;
+}
+
+.price-number {
+    font-size: 1.5rem;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    transition: color 0.3s ease;
+}
+
+.price-number.dir-up {
+    color: var(--success);
+}
+
+.price-number.dir-down {
+    color: var(--danger);
+}
+
+/* Price Meta */
+.price-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.price-badge {
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 5px;
+    letter-spacing: 0.08em;
+}
+
+.price-badge.badge-forex {
+    background: rgba(139, 92, 246, 0.12);
+    color: var(--accent-primary);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.price-badge.badge-crypto {
+    background: rgba(6, 182, 212, 0.12);
+    color: var(--cyan);
+    border: 1px solid rgba(6, 182, 212, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .price-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .price-number {
+        font-size: 1.2rem;
+    }
+
+    .price-icon {
+        width: 30px;
+        height: 30px;
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .price-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .price-card {
+        padding: 1rem;
+    }
 }

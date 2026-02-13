@@ -54,6 +54,7 @@ func (s *Server) Start() error {
 	RegisterNewsRoutes(mux, s.db)
 	RegisterStockRoutes(mux, s.db)
 	RegisterScrapingRoutes(mux)
+	RegisterMarketRoutes(mux)
 
 	handler := corsMiddleware(s.auth.Wrap(mux))
 
@@ -63,10 +64,20 @@ func (s *Server) Start() error {
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
+	allowedOrigins := map[string]bool{
+		"http://localhost:3000":    true,
+		"https://forex.wign.cloud": true,
+		"http://forex.wign.cloud":  true,
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization")
+		origin := r.Header.Get("Origin")
+		if origin != "" && allowedOrigins[origin] {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
 
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusNoContent)

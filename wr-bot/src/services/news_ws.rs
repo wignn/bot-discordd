@@ -205,6 +205,15 @@ impl NewsWebSocketService {
             "calendar.reminder" => {
                 self.handle_calendar_event(&event).await?;
             }
+            "market.trade" => {
+                if let Ok(trade_event) =
+                    serde_json::from_str::<crate::services::market_ws::MarketTradeEvent>(text)
+                {
+                    if let Some(data) = trade_event.data {
+                        crate::services::market_ws::update_price(&data);
+                    }
+                }
+            }
             "sentiment.alert" => {
                 println!("[NEWS-WS] Received sentiment alert");
             }
@@ -212,7 +221,7 @@ impl NewsWebSocketService {
                 // Expected system events
             }
             _ => {
-                println!("[NEWS-WS] Unknown event: {}", event.event);
+                // println!("[NEWS-WS] Unknown event: {}", event.event);
             }
         }
 

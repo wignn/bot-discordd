@@ -45,6 +45,7 @@ func main() {
 		"rss_interval", cfg.RSSFetchSec,
 		"stock_interval", cfg.StockFetchSec,
 		"calendar_interval", cfg.CalendarCheckSec,
+		"infoway_enabled", cfg.InfowayAPIKey != "",
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -90,6 +91,16 @@ func main() {
 	stockPipeline := pipeline.NewStockPipeline(stockCollector, db, hub)
 	calendarPipeline := pipeline.NewCalendarPipeline(calendarCollector, hub)
 
+	var infowayPipeline *pipeline.InfowayPipeline
+	if cfg.InfowayAPIKey != "" {
+		infowayPipeline = pipeline.NewInfowayPipeline(
+			cfg.InfowayAPIKey,
+			cfg.InfowayForexSymbols,
+			cfg.InfowayCryptoSymbols,
+			hub,
+		)
+	}
+
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -117,6 +128,15 @@ func main() {
 			calendarPipeline.Run(ctx)
 		})
 	}()
+
+	if infowayPipeline != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			infowayPipeline.Run(ctx)
+		}()
+		slog.Info("infoway market data gateway enabled")
+	}
 
 	slog.Info("news-server running", "port", cfg.ServerPort)
 	wg.Wait()

@@ -27,10 +27,9 @@ impl Config {
         let openrouter_api_key = env::var("OPENROUTE_API_KEY").ok();
         let openrouter_model = env::var("OPENROUTE_MODEL")
             .unwrap_or_else(|_| "tngtech/deepseek-r1t2-chimera:free".to_string());
-        let openrouter_base_url =
-            env::var("OPENROUTE_BASE_URL").unwrap_or_else(|_| "https://openrouter.ai/api/v1".to_string());
+        let openrouter_base_url = env::var("OPENROUTE_BASE_URL")
+            .unwrap_or_else(|_| "https://openrouter.ai/api/v1".to_string());
 
-   
         let gemini_api_key = env::var("GEMINI_API_KEY").unwrap_or_else(|_| String::new());
         let gemini_model = env::var("GEMINI_MODEL").ok();
 

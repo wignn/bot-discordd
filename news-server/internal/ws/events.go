@@ -20,6 +20,7 @@ const (
 	EventNewsHighImpact   = "news.high_impact"
 	EventStockNewsNew     = "stock.news.new"
 	EventCalendarReminder = "calendar.reminder"
+	EventMarketTrade      = "market.trade"
 	EventHeartbeat        = "heartbeat"
 	EventSystemStatus     = "system.status"
 )

@@ -1,6 +1,7 @@
 pub mod ai;
 
 pub mod gemini;
+pub mod market_ws;
 pub mod music;
 pub mod news_ws;
 pub mod stock_ws;
