@@ -11,8 +11,8 @@ const SYMBOL_INFO = {
     USDJPY: { label: 'USD/JPY', decimals: 3 },
     BTCUSDT: { label: 'Bitcoin', icon: '₿', decimals: 2 },
     ETHUSDT: { label: 'Ethereum', icon: 'Ξ', decimals: 2 },
-    NAS100: { label: 'Nasdaq 100', icon: '🇺🇸', decimals: 2 },
-    SPX500: { label: 'S&P 500', icon: '🇺🇸', decimals: 2 },
+    SOLUSDT: { label: 'Solana', icon: '◎', decimals: 2 },
+    BNBUSDT: { label: 'BNB', icon: '⬡', decimals: 2 },
 };
 
 export default function LivePrice() {
@@ -97,7 +97,7 @@ export default function LivePrice() {
         return 'neutral';
     };
 
-    const symbolOrder = ['XAUUSD', 'NAS100', 'SPX500', 'EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSDT', 'ETHUSDT'];
+    const symbolOrder = ['XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT'];
     const activePrices = symbolOrder.filter(s => prices[s]);
 
     return (
