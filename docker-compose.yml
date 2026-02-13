@@ -29,14 +29,8 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/forex
-      - PORT=8000
-      - API_KEYS=${API_KEYS:-}
-      - LOG_LEVEL=INFO
-      - INFOWAY_API_KEY=${INFOWAY_API_KEY:-}
-      - INFOWAY_FOREX_SYMBOLS=${INFOWAY_FOREX_SYMBOLS:-EURUSD,GBPUSD,USDJPY,XAUUSD}
-      - INFOWAY_CRYPTO_SYMBOLS=${INFOWAY_CRYPTO_SYMBOLS:-BTCUSDT,ETHUSDT}
+    env_file:
+      - ./news-server/.env
     depends_on:
       postgres:
         condition: service_healthy
