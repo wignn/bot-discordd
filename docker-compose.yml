@@ -105,6 +105,9 @@ services:
     build:
       context: ./frontend
       dockerfile: ../infrastructure/docker/Dockerfile.frontend
+      args:
+        VITE_API_URL: https://api.wign.cloud
+        VITE_WS_URL: wss://api.wign.cloud
     container_name: forex-frontend
     image: wign/forex-frontend:latest
     restart: unless-stopped
