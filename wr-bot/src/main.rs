@@ -241,18 +241,15 @@ async fn main() -> Result<(), BotError> {
         loop {
             interval.tick().await;
 
-            let total_users: u64 = cache
-                .guilds()
-                .iter()
-                .filter_map(|guild_id| cache.guild(*guild_id))
-                .map(|g| g.member_count)
-                .sum();
-            let total_server: u64 = cache.guilds().len() as u64;
+            // let total_users: u64 = cache
+            //     .guilds()
+            //     .iter()
+            //     .filter_map(|guild_id| cache.guild(*guild_id))
+            //     .map(|g| g.member_count)
+            //     .sum();
+            // let total_server: u64 = cache.guilds().len() as u64;
 
-            let mut activities = vec![
-                ActivityData::custom(format!("With {} users!", total_users)),
-                ActivityData::custom(format!("In {} server!", total_server)),
-            ];
+            let mut activities = vec![];
 
             if let Some(xau) = worm::services::market_ws::get_xauusd_display() {
                 activities.push(ActivityData::custom(xau));

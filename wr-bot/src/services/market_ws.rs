@@ -62,11 +62,6 @@ pub fn get_all_prices() -> Vec<CachedPrice> {
 
 pub fn get_xauusd_display() -> Option<String> {
     get_price("XAUUSD").map(|p| {
-        let arrow = match p.direction.as_str() {
-            "buy" => "📈",
-            "sell" => "📉",
-            _ => "💰",
-        };
-        format!("{} XAUUSD ${:.2}", arrow, p.price)
+        format!("XAUUSD ${:.2}", p.price)
     })
 }
