@@ -86,7 +86,6 @@ func main() {
 	calendarCollector := collector.NewCalendarCollector(timeout)
 	articleScraper := scraper.NewArticleScraper(cfg.ScraperUA, timeout)
 
-	// Pipelines (broadcast via hub directly)
 	newsPipeline := pipeline.NewNewsPipeline(rssCollector, articleScraper, db, hub)
 	stockPipeline := pipeline.NewStockPipeline(stockCollector, db, hub)
 	calendarPipeline := pipeline.NewCalendarPipeline(calendarCollector, hub)
@@ -97,6 +96,7 @@ func main() {
 			cfg.InfowayAPIKey,
 			cfg.InfowayForexSymbols,
 			cfg.InfowayCryptoSymbols,
+			cfg.InfowayStockSymbols,
 			hub,
 		)
 	}

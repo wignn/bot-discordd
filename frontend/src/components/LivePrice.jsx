@@ -1,17 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
-import { TrendingUp, TrendingDown, Minus, Activity, Wifi, WifiOff } from 'lucide-react';
 import './LivePrice.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const WS_URL = import.meta.env.VITE_WS_URL || '';
 
 const SYMBOL_INFO = {
-    XAUUSD: { label: 'Gold', icon: '🥇', decimals: 2 },
-    EURUSD: { label: 'EUR/USD', icon: '💶', decimals: 5 },
-    GBPUSD: { label: 'GBP/USD', icon: '💷', decimals: 5 },
-    USDJPY: { label: 'USD/JPY', icon: '💴', decimals: 3 },
+    XAUUSD: { label: 'Gold', decimals: 2 },
+    EURUSD: { label: 'EUR/USD', decimals: 5 },
+    GBPUSD: { label: 'GBP/USD', decimals: 5 },
+    USDJPY: { label: 'USD/JPY', decimals: 3 },
     BTCUSDT: { label: 'Bitcoin', icon: '₿', decimals: 2 },
     ETHUSDT: { label: 'Ethereum', icon: 'Ξ', decimals: 2 },
+    NAS100: { label: 'Nasdaq 100', icon: '🇺🇸', decimals: 2 },
+    SPX500: { label: 'S&P 500', icon: '🇺🇸', decimals: 2 },
 };
 
 export default function LivePrice() {
@@ -96,7 +97,7 @@ export default function LivePrice() {
         return 'neutral';
     };
 
-    const symbolOrder = ['XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSDT', 'ETHUSDT'];
+    const symbolOrder = ['XAUUSD', 'NAS100', 'SPX500', 'EURUSD', 'GBPUSD', 'USDJPY', 'BTCUSDT', 'ETHUSDT'];
     const activePrices = symbolOrder.filter(s => prices[s]);
 
     return (
@@ -110,24 +111,24 @@ export default function LivePrice() {
                 <div className="price-status">
                     {isConnected ? (
                         <span className="status-badge status-live">
-                            <Wifi size={14} /> <Activity size={14} /> Live
+                            ● Live
                         </span>
                     ) : (
                         <span className="status-badge status-offline">
-                            <WifiOff size={14} /> Connecting...
+                            ○ Connecting...
                         </span>
                     )}
                 </div>
 
                 {activePrices.length === 0 ? (
                     <div className="price-loading">
-                        <Activity size={24} className="spin" />
+                        <div className="spinner"></div>
                         <p>Waiting for market data...</p>
                     </div>
                 ) : (
                     <div className="price-grid">
                         {activePrices.map(symbol => {
-                            const info = SYMBOL_INFO[symbol] || { label: symbol, icon: '📊', decimals: 2 };
+                            const info = SYMBOL_INFO[symbol] || { label: symbol, decimals: 2 };
                             const data = prices[symbol];
                             const dir = getDirection(symbol, data.price);
                             const isFlashing = flashSymbol === symbol;
@@ -141,15 +142,14 @@ export default function LivePrice() {
                                     className={`price-card ${dir} ${isFlashing ? 'flash' : ''}`}
                                 >
                                     <div className="price-card-header">
-                                        <span className="price-icon">{info.icon}</span>
                                         <div className="price-label">
                                             <span className="price-symbol">{symbol}</span>
                                             <span className="price-name">{info.label}</span>
                                         </div>
                                         <div className={`price-direction dir-${dir}`}>
-                                            {dir === 'up' && <TrendingUp size={16} />}
-                                            {dir === 'down' && <TrendingDown size={16} />}
-                                            {dir === 'neutral' && <Minus size={16} />}
+                                            {dir === 'up' && '▲'}
+                                            {dir === 'down' && '▼'}
+                                            {dir === 'neutral' && '━'}
                                         </div>
                                     </div>
                                     <div className="price-value">
@@ -159,7 +159,7 @@ export default function LivePrice() {
                                     </div>
                                     <div className="price-meta">
                                         <span className={`price-badge badge-${data.asset_type}`}>
-                                            {data.asset_type === 'forex' ? 'FOREX' : 'CRYPTO'}
+                                            {data.asset_type === 'forex' ? 'FOREX' : data.asset_type === 'crypto' ? 'CRYPTO' : 'STOCK'}
                                         </span>
                                     </div>
                                 </div>

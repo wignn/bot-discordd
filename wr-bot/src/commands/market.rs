@@ -24,6 +24,7 @@ pub async fn price(
             let asset_label = match cached.asset_type.as_str() {
                 "crypto" => "Crypto",
                 "forex" => "Forex",
+                "stock" => "Stock",
                 _ => "Market",
             };
 
@@ -104,6 +105,7 @@ pub async fn prices(ctx: Context<'_>) -> Result<(), Error> {
 
     let mut forex_lines = Vec::new();
     let mut crypto_lines = Vec::new();
+    let mut stock_lines = Vec::new();
 
     let mut sorted = all.clone();
     sorted.sort_by(|a, b| a.symbol.cmp(&b.symbol));
@@ -123,6 +125,8 @@ pub async fn prices(ctx: Context<'_>) -> Result<(), Error> {
 
         if p.asset_type == "crypto" {
             crypto_lines.push(line);
+        } else if p.asset_type == "stock" {
+            stock_lines.push(line);
         } else {
             forex_lines.push(line);
         }
@@ -141,6 +145,9 @@ pub async fn prices(ctx: Context<'_>) -> Result<(), Error> {
     }
     if !crypto_lines.is_empty() {
         embed = embed.field("₿ Crypto", crypto_lines.join("\n"), false);
+    }
+    if !stock_lines.is_empty() {
+        embed = embed.field("📈 Stocks", stock_lines.join("\n"), false);
     }
 
     ctx.send(poise::CreateReply::default().embed(embed)).await?;

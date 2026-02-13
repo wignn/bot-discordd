@@ -21,6 +21,7 @@ type Config struct {
 	InfowayAPIKey        string
 	InfowayForexSymbols  string
 	InfowayCryptoSymbols string
+	InfowayStockSymbols  string
 }
 
 func Load() *Config {
@@ -39,6 +40,7 @@ func Load() *Config {
 		InfowayAPIKey:        getEnv("INFOWAY_API_KEY", ""),
 		InfowayForexSymbols:  getEnv("INFOWAY_FOREX_SYMBOLS", "EURUSD,GBPUSD,USDJPY,XAUUSD"),
 		InfowayCryptoSymbols: getEnv("INFOWAY_CRYPTO_SYMBOLS", "BTCUSDT,ETHUSDT"),
+		InfowayStockSymbols:  getEnv("INFOWAY_STOCK_SYMBOLS", "NAS100,SPX500"),
 	}
 
 	cfg.DatabaseURL = strings.Replace(cfg.DatabaseURL, "postgresql+asyncpg://", "postgres://", 1)

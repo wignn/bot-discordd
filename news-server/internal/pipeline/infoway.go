@@ -16,7 +16,7 @@ type InfowayPipeline struct {
 	hub     *ws.Hub
 }
 
-func NewInfowayPipeline(apiKey string, forexSymbols, cryptoSymbols string, hub *ws.Hub) *InfowayPipeline {
+func NewInfowayPipeline(apiKey string, forexSymbols, cryptoSymbols, stockSymbols string, hub *ws.Hub) *InfowayPipeline {
 	var clients []*infoway.Client
 
 	if forexSymbols != "" {
@@ -25,6 +25,10 @@ func NewInfowayPipeline(apiKey string, forexSymbols, cryptoSymbols string, hub *
 
 	if cryptoSymbols != "" {
 		clients = append(clients, infoway.NewClient(apiKey, infoway.BusinessCrypto, cryptoSymbols))
+	}
+
+	if stockSymbols != "" {
+		clients = append(clients, infoway.NewClient(apiKey, infoway.BusinessStock, stockSymbols))
 	}
 
 	return &InfowayPipeline{
