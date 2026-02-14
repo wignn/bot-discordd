@@ -153,6 +153,10 @@ async fn main() -> Result<(), BotError> {
                 // Market price commands
                 market::price(),
                 market::prices(),
+                // Price alert commands
+                market::alert(),
+                market::alerts(),
+                market::alert_remove(),
             ],
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("!".into()),
@@ -291,6 +295,11 @@ async fn main() -> Result<(), BotError> {
         "[OK] Stock News WebSocket service started (connecting to {})",
         stock_ws_url
     );
+
+    let db_for_alerts = db.clone();
+    let http_for_alerts = http.clone();
+    worm::services::price_alert::start_price_alert_checker(db_for_alerts, http_for_alerts);
+    println!("[OK] Price alert checker started");
     let http_for_idle = http.clone();
     let songbird_for_idle = songbird.clone();
     tokio::spawn(async move {

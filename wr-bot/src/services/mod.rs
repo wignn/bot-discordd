@@ -1,11 +1,10 @@
 pub mod ai;
-
 pub mod gemini;
 pub mod market_ws;
 pub mod music;
 pub mod news_ws;
+pub mod price_alert;
 pub mod stock_ws;
-
 pub mod youtube;
 
 pub use gemini::GeminiService;
