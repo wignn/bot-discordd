@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM price_alerts WHERE id = $1 AND user_id = $2 AND is_triggered = FALSE",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b48ae4cd750a505ecaa1ea3b9ecfe77e916a5a98165f34bb7195b68c9eedf371"
+}

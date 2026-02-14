@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT symbol FROM price_alerts WHERE is_triggered = FALSE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "symbol",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d9f073e8bdb3535d259cfe9d41e62d359786b4bfe59fa8f67a9bbca3d3e2c329"
+}

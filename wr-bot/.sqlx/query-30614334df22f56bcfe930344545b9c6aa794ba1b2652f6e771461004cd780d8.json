@@ -1,0 +1,74 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO price_alerts (user_id, guild_id, symbol, target_price, direction)\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING id, user_id, guild_id, symbol, target_price, direction, is_triggered, created_at, triggered_at\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "guild_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "symbol",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "target_price",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "direction",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "is_triggered",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "triggered_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Text",
+        "Float8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "30614334df22f56bcfe930344545b9c6aa794ba1b2652f6e771461004cd780d8"
+}

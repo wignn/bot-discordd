@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE price_alerts\n            SET is_triggered = TRUE, triggered_at = NOW()\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "91b71f5ee353dc7cbafd05223c9a41f31854eebdd9732d18e9d2f42c96b6c6e8"
+}
