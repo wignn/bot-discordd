@@ -1,4 +1,4 @@
-# Fio - Forex News Discord Bot
+# Fio
 
 Real-time forex news monitoring with automatic Discord notifications.
 
