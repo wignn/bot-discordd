@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, channel_id, guild_id, is_active FROM volatility_channels WHERE guild_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "channel_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "guild_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "is_active",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "28890364d59ef182838cd17405c4ba1531a88bd215956d188739a8c9baa78205"
+}

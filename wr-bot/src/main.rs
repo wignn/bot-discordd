@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::env;
 use worm::commands::{
     Data, admin, ai, calendar, forex, general, market, mean, moderation, music, ping, stock, sys,
+    volatility,
 };
 use worm::config::Config;
 use worm::error::BotError;
@@ -157,6 +158,10 @@ async fn main() -> Result<(), BotError> {
                 market::alert(),
                 market::alerts(),
                 market::alert_remove(),
+                // Volatility spike detector commands
+                volatility::volatility_setup(),
+                volatility::volatility_disable(),
+                volatility::volatility_status(),
             ],
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("!".into()),

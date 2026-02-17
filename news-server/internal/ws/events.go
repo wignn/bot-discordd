@@ -16,13 +16,14 @@ func init() {
 }
 
 const (
-	EventNewsNew          = "news.new"
-	EventNewsHighImpact   = "news.high_impact"
-	EventStockNewsNew     = "stock.news.new"
-	EventCalendarReminder = "calendar.reminder"
-	EventMarketTrade      = "market.trade"
-	EventHeartbeat        = "heartbeat"
-	EventSystemStatus     = "system.status"
+	EventNewsNew             = "news.new"
+	EventNewsHighImpact      = "news.high_impact"
+	EventStockNewsNew        = "stock.news.new"
+	EventCalendarReminder    = "calendar.reminder"
+	EventMarketTrade         = "market.trade"
+	EventGoldVolatilitySpike = "gold.volatility_spike"
+	EventHeartbeat           = "heartbeat"
+	EventSystemStatus        = "system.status"
 )
 
 type NewsArticleData struct {

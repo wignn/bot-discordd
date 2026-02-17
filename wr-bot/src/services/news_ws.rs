@@ -1,4 +1,6 @@
-use crate::repository::{CalendarRepository, DbPool, ForexRepository, StockRepository};
+use crate::repository::{
+    CalendarRepository, DbPool, ForexRepository, StockRepository, VolatilityRepository,
+};
 use futures_util::{SinkExt, StreamExt};
 use poise::serenity_prelude::{ChannelId, CreateEmbed, CreateMessage, Http};
 use serde::{Deserialize, Serialize};
@@ -204,6 +206,9 @@ impl NewsWebSocketService {
             }
             "calendar.reminder" => {
                 self.handle_calendar_event(&event).await?;
+            }
+            "gold.volatility_spike" => {
+                self.handle_volatility_spike(&event).await?;
             }
             "market.trade" => {
                 if let Ok(trade_event) =
@@ -450,6 +455,68 @@ impl NewsWebSocketService {
             "[CALENDAR-WS] Sent reminder to {} channels: {}",
             channels.len(),
             calendar_event.title
+        );
+
+        Ok(())
+    }
+
+    async fn handle_volatility_spike(
+        &self,
+        event: &NewsEvent,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let data = event.data.as_ref().ok_or("No data in volatility event")?;
+        let discord_embed = data
+            .discord_embed
+            .as_ref()
+            .ok_or("No embed in volatility event")?;
+
+        let channels = VolatilityRepository::get_active_channels(&self.db).await?;
+
+        if channels.is_empty() {
+            return Ok(());
+        }
+
+        let mut embed = CreateEmbed::new();
+
+        if let Some(title) = &discord_embed.title {
+            embed = embed.title(title);
+        }
+        if let Some(desc) = &discord_embed.description {
+            embed = embed.description(desc);
+        }
+        if let Some(color) = discord_embed.color {
+            embed = embed.color(color);
+        }
+        if let Some(fields) = &discord_embed.fields {
+            for field in fields {
+                embed = embed.field(&field.name, &field.value, field.inline);
+            }
+        }
+        if let Some(footer) = &discord_embed.footer {
+            embed = embed.footer(poise::serenity_prelude::CreateEmbedFooter::new(
+                &footer.text,
+            ));
+        }
+        embed = embed.timestamp(poise::serenity_prelude::Timestamp::now());
+
+        for channel in &channels {
+            let channel_id = ChannelId::new(channel.channel_id as u64);
+
+            let message = CreateMessage::new()
+                .content("@everyone **GOLD VOLATILITY SPIKE**")
+                .embed(embed.clone());
+
+            if let Err(e) = channel_id.send_message(&self.http, message).await {
+                println!(
+                    "[VOLATILITY-WS] Failed to send to channel {}: {}",
+                    channel.channel_id, e
+                );
+            }
+        }
+
+        println!(
+            "[VOLATILITY-WS] Sent gold volatility alert to {} channels",
+            channels.len(),
         );
 
         Ok(())

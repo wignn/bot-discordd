@@ -136,6 +136,17 @@ func main() {
 			infowayPipeline.Run(ctx)
 		}()
 		slog.Info("infoway market data gateway enabled")
+
+		// Volatility detector requires market data from infoway
+		volatilityPipeline := pipeline.NewVolatilityPipeline(hub)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// Wait for price cache to populate
+			time.Sleep(30 * time.Second)
+			volatilityPipeline.Run(ctx)
+		}()
+		slog.Info("gold volatility spike detector enabled")
 	}
 
 	slog.Info("news-server running", "port", cfg.ServerPort)

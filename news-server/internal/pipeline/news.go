@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"log/slog"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -117,7 +119,7 @@ func (p *NewsPipeline) processEntry(ctx context.Context, entry collector.RSSEntr
 		summary = htmlutil.ExtractSummary(content, 500)
 	}
 
-	sourceID := p.ensureSource(ctx)
+	sourceID := p.ensureSource(ctx, sourceName, feedURL)
 
 	_, err = p.db.Exec(ctx,
 		`INSERT INTO news_articles 
@@ -132,7 +134,7 @@ func (p *NewsPipeline) processEntry(ctx context.Context, entry collector.RSSEntr
 	if err != nil {
 		slog.Warn("db insert failed", "error", err, "url", entry.Link)
 	} else {
-		slog.Info("article saved", "title", truncateStr(title, 50))
+		slog.Info("article saved", "title", truncateStr(title, 50), "source", sourceName)
 	}
 
 	// Broadcast directly via WebSocket hub
@@ -160,27 +162,49 @@ func (p *NewsPipeline) processEntry(ctx context.Context, entry collector.RSSEntr
 	return "processed"
 }
 
-func (p *NewsPipeline) ensureSource(ctx context.Context) string {
+func (p *NewsPipeline) ensureSource(ctx context.Context, sourceName, feedURL string) string {
+	slug := toSlug(sourceName)
+	if slug == "" {
+		slug = "unknown"
+	}
+
 	var id string
 	err := p.db.QueryRow(ctx,
-		"SELECT id FROM news_sources WHERE slug = 'default' LIMIT 1",
+		"SELECT id FROM news_sources WHERE slug = $1 LIMIT 1", slug,
 	).Scan(&id)
 
 	if err == nil {
 		return id
 	}
 
-	// Generate a deterministic UUID from the hash (format: 8-4-4-4-12)
-	hash := fmt.Sprintf("%x", sha256.Sum256([]byte("default-source")))
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte("source-"+slug)))
 	newID := fmt.Sprintf("%s-%s-%s-%s-%s", hash[0:8], hash[8:12], hash[12:16], hash[16:20], hash[20:32])
+
+	displayName := sourceName
+	if displayName == "" {
+		displayName = "Unknown"
+	}
+	sourceURL := feedURL
+	if sourceURL == "" {
+		sourceURL = "https://unknown.com"
+	}
+
 	_, err = p.db.Exec(ctx,
-		`INSERT INTO news_sources (id, name, slug, source_type, url, is_active)
-		 VALUES ($1, 'Default Source', 'default', 'rss', 'https://example.com', TRUE)
+		`INSERT INTO news_sources (id, name, slug, source_type, url, rss_url, is_active)
+		 VALUES ($1, $2, $3, 'rss', $4, $5, TRUE)
 		 ON CONFLICT (slug) DO NOTHING`,
-		newID,
+		newID, displayName, slug, sourceURL, feedURL,
 	)
 	if err != nil {
-		slog.Warn("create default source failed", "error", err)
+		slog.Warn("create source failed", "error", err, "slug", slug)
+	}
+
+	// Re-read in case of race condition (ON CONFLICT DO NOTHING)
+	err = p.db.QueryRow(ctx,
+		"SELECT id FROM news_sources WHERE slug = $1 LIMIT 1", slug,
+	).Scan(&id)
+	if err == nil {
+		return id
 	}
 
 	return newID
@@ -198,4 +222,13 @@ func nilIfEmpty(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+var slugRe = regexp.MustCompile(`[^a-z0-9]+`)
+
+func toSlug(name string) string {
+	s := strings.ToLower(strings.TrimSpace(name))
+	s = slugRe.ReplaceAllString(s, "-")
+	s = strings.Trim(s, "-")
+	return s
 }

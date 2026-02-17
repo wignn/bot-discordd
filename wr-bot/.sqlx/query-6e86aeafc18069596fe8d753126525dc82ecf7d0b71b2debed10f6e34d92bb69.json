@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE volatility_channels SET is_active = FALSE WHERE guild_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6e86aeafc18069596fe8d753126525dc82ecf7d0b71b2debed10f6e34d92bb69"
+}
