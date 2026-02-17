@@ -4,7 +4,9 @@ Real-time forex news monitoring with automatic Discord notifications.
 
 ## Architecture
 
-```
+![System Architecture](./architecture.svg)
+
+<!-- ```
 RSS Feeds ─┐
 Stock Feeds ┤     ┌──────────────┐    WebSocket    ┌─────────────┐
 Calendar ───┴────>│ News Server  │────────────────>│ Discord Bot │
@@ -14,7 +16,7 @@ Calendar ───┴────>│ News Server  │────────�
                   ┌──────┴───────┐
                   │  PostgreSQL  │
                   └──────────────┘
-```
+``` -->
 
 Single Go binary handles RSS collection, article scraping, WebSocket broadcasting, and REST API.
 
