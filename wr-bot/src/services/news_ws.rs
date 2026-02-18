@@ -216,6 +216,15 @@ impl NewsWebSocketService {
                 {
                     if let Some(data) = trade_event.data {
                         crate::services::market_ws::update_price(&data);
+                        crate::services::price_alert::check_price(
+                            &data.symbol,
+                            data.price,
+                            &data.price_str,
+                            &data.asset_type,
+                            &self.http,
+                            &self.db,
+                        )
+                        .await;
                     }
                 }
             }
@@ -226,7 +235,7 @@ impl NewsWebSocketService {
                 // Expected system events
             }
             _ => {
-                // println!("[NEWS-WS] Unknown event: {}", event.event);
+                println!("[NEWS-WS] Unknown event: {}", event.event);
             }
         }
 
@@ -241,19 +250,15 @@ impl NewsWebSocketService {
         let article = data.article.as_ref().ok_or("No article in event")?;
         let discord_embed = data.discord_embed.as_ref().ok_or("No embed in event")?;
 
-        // Check if already sent
         if ForexRepository::is_news_sent(&self.db, &article.id).await? {
             return Ok(());
         }
-
-        // Get active channels
         let channels = ForexRepository::get_active_channels(&self.db).await?;
 
         if channels.is_empty() {
             return Ok(());
         }
 
-        // Build embed
         let mut embed = CreateEmbed::new();
 
         if let Some(title) = &discord_embed.title {
@@ -302,7 +307,6 @@ impl NewsWebSocketService {
             }
         }
 
-        // Mark as sent
         ForexRepository::insert_news(&self.db, &article.id, &article.source_name).await?;
 
         println!(

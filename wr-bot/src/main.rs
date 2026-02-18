@@ -50,6 +50,10 @@ async fn main() -> Result<(), BotError> {
 
     println!("[OK] Database initialized successfully");
 
+    if let Err(e) = worm::services::price_alert::load_alerts_to_cache(&db).await {
+        println!("[WARN] Failed to load price alerts to cache: {}", e);
+    }
+
     if config.is_openrouter_enabled() {
         println!("[OK] OpenRouter AI enabled (worm command)");
     } else {
@@ -301,10 +305,6 @@ async fn main() -> Result<(), BotError> {
         stock_ws_url
     );
 
-    let db_for_alerts = db.clone();
-    let http_for_alerts = http.clone();
-    worm::services::price_alert::start_price_alert_checker(db_for_alerts, http_for_alerts);
-    println!("[OK] Price alert checker started");
     let http_for_idle = http.clone();
     let songbird_for_idle = songbird.clone();
     tokio::spawn(async move {

@@ -1,6 +1,6 @@
 use crate::commands::Data;
 use crate::repository::PriceAlertRepository;
-use crate::services::market_ws;
+use crate::services::{market_ws, price_alert};
 use poise::serenity_prelude::CreateEmbed;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -8,7 +8,6 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 
 const MAX_ALERTS_PER_USER: i64 = 10;
 
-/// Check real-time price for a forex/crypto symbol
 #[poise::command(prefix_command, slash_command, rename = "price")]
 pub async fn price(
     ctx: Context<'_>,
@@ -236,6 +235,8 @@ pub async fn alert(
         PriceAlertRepository::create_alert(db, user_id, guild_id, &upper, target_price, direction)
             .await?;
 
+    price_alert::add_to_cache(&created);
+
     let current_display = if current.asset_type == "crypto" {
         format!("${}", current.price_str)
     } else {
@@ -352,6 +353,10 @@ pub async fn alert_remove(
     let user_id = ctx.author().id.get();
 
     let deleted = PriceAlertRepository::delete_alert(db, alert_id, user_id).await?;
+
+    if deleted {
+        price_alert::remove_from_cache(alert_id);
+    }
 
     let embed = if deleted {
         CreateEmbed::new()
