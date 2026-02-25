@@ -17,6 +17,7 @@ import (
 	"github.com/wign/news-server/internal/database"
 	"github.com/wign/news-server/internal/pipeline"
 	"github.com/wign/news-server/internal/scraper"
+	"github.com/wign/news-server/internal/stats"
 	"github.com/wign/news-server/internal/ws"
 )
 
@@ -45,6 +46,7 @@ func main() {
 		"rss_interval", cfg.RSSFetchSec,
 		"stock_interval", cfg.StockFetchSec,
 		"calendar_interval", cfg.CalendarCheckSec,
+		"stats_interval", cfg.StatsIntervalSec,
 		"infoway_enabled", cfg.InfowayAPIKey != "",
 	)
 
@@ -70,8 +72,12 @@ func main() {
 	hub := ws.NewHub()
 	go hub.Run()
 
+	// Stats WebSocket hub
+	statsHub := stats.NewStatsHub()
+	statsInterval := time.Duration(cfg.StatsIntervalSec) * time.Second
+
 	// HTTP/WebSocket server
-	server := api.NewServer(hub, db, cfg.ServerPort, cfg.APIKeys)
+	server := api.NewServer(hub, statsHub, db, cfg.ServerPort, cfg.APIKeys)
 	go func() {
 		if err := server.Start(); err != nil {
 			slog.Error("http server failed", "error", err)
@@ -102,6 +108,13 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		statsHub.Run(ctx, statsInterval)
+	}()
+	slog.Info("stats ws endpoint enabled", "interval", statsInterval)
 
 	wg.Add(1)
 	go func() {

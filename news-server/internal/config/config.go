@@ -16,6 +16,7 @@ type Config struct {
 	RSSFetchSec      int
 	StockFetchSec    int
 	CalendarCheckSec int
+	StatsIntervalSec int
 	LogLevel         string
 
 	InfowayAPIKey        string
@@ -35,6 +36,7 @@ func Load() *Config {
 		RSSFetchSec:      getEnvInt("RSS_FETCH_SEC", 20),
 		StockFetchSec:    getEnvInt("STOCK_FETCH_SEC", 20),
 		CalendarCheckSec: getEnvInt("CALENDAR_CHECK_SEC", 60),
+		StatsIntervalSec: getEnvInt("STATS_INTERVAL_SEC", 5),
 		LogLevel:         getEnv("LOG_LEVEL", "INFO"),
 
 		InfowayAPIKey:        getEnv("INFOWAY_API_KEY", ""),

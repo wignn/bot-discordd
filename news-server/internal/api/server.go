@@ -6,22 +6,25 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/wign/news-server/internal/stats"
 	"github.com/wign/news-server/internal/ws"
 )
 
 type Server struct {
-	hub  *ws.Hub
-	db   *pgxpool.Pool
-	port int
-	auth *APIKeyMiddleware
+	hub      *ws.Hub
+	statsHub *stats.StatsHub
+	db       *pgxpool.Pool
+	port     int
+	auth     *APIKeyMiddleware
 }
 
-func NewServer(hub *ws.Hub, db *pgxpool.Pool, port int, apiKeys string) *Server {
+func NewServer(hub *ws.Hub, statsHub *stats.StatsHub, db *pgxpool.Pool, port int, apiKeys string) *Server {
 	return &Server{
-		hub:  hub,
-		db:   db,
-		port: port,
-		auth: NewAPIKeyMiddleware(apiKeys),
+		hub:      hub,
+		statsHub: statsHub,
+		db:       db,
+		port:     port,
+		auth:     NewAPIKeyMiddleware(apiKeys),
 	}
 }
 
@@ -49,6 +52,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("GET /api/v1/stream/ws/discord", s.hub.HandleWS)
 	mux.HandleFunc("GET /api/v1/stream/ws", s.hub.HandleWS)
 	mux.HandleFunc("GET /api/v1/stock/ws", s.hub.HandleWS)
+	mux.HandleFunc("GET /ws/stats", s.statsHub.HandleWS)
 
 	// REST API
 	RegisterNewsRoutes(mux, s.db)

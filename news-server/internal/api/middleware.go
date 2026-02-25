@@ -33,6 +33,11 @@ func (m *APIKeyMiddleware) Wrap(next http.Handler) http.Handler {
 			return
 		}
 
+		if strings.HasPrefix(r.URL.Path, "/ws/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		if r.Method == "GET" && (strings.HasPrefix(r.URL.Path, "/api/v1/news") ||
 			strings.HasPrefix(r.URL.Path, "/api/v1/stock") ||
 			strings.HasPrefix(r.URL.Path, "/api/v1/stream")) {
