@@ -22,6 +22,7 @@ const (
 	EventCalendarReminder    = "calendar.reminder"
 	EventMarketTrade         = "market.trade"
 	EventGoldVolatilitySpike = "gold.volatility_spike"
+	EventTwitterNew          = "twitter.new"
 	EventHeartbeat           = "heartbeat"
 	EventSystemStatus        = "system.status"
 )
@@ -172,4 +173,51 @@ func formatFooterDate(isoTime string) string {
 		return ""
 	}
 	return t.In(wib).Format("02/01/2006 15:04")
+}
+
+type TwitterTweetData struct {
+	ID             string   `json:"id"`
+	Text           string   `json:"text"`
+	AuthorUsername string   `json:"author_username"`
+	AuthorName     string   `json:"author_name"`
+	AuthorAvatar   string   `json:"author_avatar,omitempty"`
+	CreatedAt      string   `json:"created_at,omitempty"`
+	URL            string   `json:"url"`
+	MediaURLs      []string `json:"media_urls,omitempty"`
+}
+
+func BuildTwitterEmbed(t TwitterTweetData) map[string]interface{} {
+	color := 0x1DA1F2 // Twitter/X blue
+
+	timeStr := formatWIB(t.CreatedAt)
+	footerDate := formatFooterDate(t.CreatedAt)
+
+	// Truncate tweet text for embed
+	text := t.Text
+	if len(text) > 500 {
+		text = text[:500] + "..."
+	}
+
+	desc := fmt.Sprintf("%s\n\n[Lihat di X →](%s)", text, t.URL)
+
+	result := map[string]interface{}{
+		"title":       fmt.Sprintf("@%s", t.AuthorUsername),
+		"description": desc,
+		"color":       color,
+		"fields": []map[string]interface{}{
+			{"name": "Waktu", "value": timeStr, "inline": true},
+			{"name": "Author", "value": t.AuthorName, "inline": true},
+		},
+		"footer": map[string]interface{}{
+			"text": fmt.Sprintf("X/Twitter • @%s • %s", t.AuthorUsername, footerDate),
+		},
+	}
+
+	if t.AuthorAvatar != "" {
+		result["thumbnail"] = map[string]interface{}{
+			"url": t.AuthorAvatar,
+		}
+	}
+
+	return result
 }

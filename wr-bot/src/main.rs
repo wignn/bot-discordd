@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use std::env;
 use worm::commands::{
     Data, admin, ai, calendar, forex, general, market, mean, moderation, music, ping, stock, sys,
-    volatility,
+    twitter, volatility,
 };
 use worm::config::Config;
 use worm::error::BotError;
@@ -166,6 +166,11 @@ async fn main() -> Result<(), BotError> {
                 volatility::volatility_setup(),
                 volatility::volatility_disable(),
                 volatility::volatility_status(),
+                // X/Twitter feed commands
+                twitter::twitter_setup(),
+                twitter::twitter_disable(),
+                twitter::twitter_enable(),
+                twitter::twitter_status(),
             ],
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("!".into()),

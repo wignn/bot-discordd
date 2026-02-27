@@ -1,5 +1,6 @@
 use crate::repository::{
-    CalendarRepository, DbPool, ForexRepository, StockRepository, VolatilityRepository,
+    CalendarRepository, DbPool, ForexRepository, StockRepository, TwitterRepository,
+    VolatilityRepository,
 };
 use futures_util::{SinkExt, StreamExt};
 use poise::serenity_prelude::{ChannelId, CreateEmbed, CreateMessage, Http};
@@ -23,6 +24,7 @@ pub struct NewsEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NewsEventData {
     pub article: Option<ArticleData>,
+    pub tweet: Option<TweetData>,
     pub discord_embed: Option<DiscordEmbed>,
     pub alert: Option<bool>,
     pub mention_everyone: Option<bool>,
@@ -95,6 +97,19 @@ pub struct EmbedThumbnail {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbedFooter {
     pub text: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TweetData {
+    pub id: String,
+    pub text: String,
+    pub author_username: String,
+    pub author_name: String,
+    pub author_avatar: Option<String>,
+    pub created_at: Option<String>,
+    pub url: String,
+    #[serde(default)]
+    pub media_urls: Vec<String>,
 }
 
 pub struct NewsWebSocketService {
@@ -209,6 +224,9 @@ impl NewsWebSocketService {
             }
             "gold.volatility_spike" => {
                 self.handle_volatility_spike(&event).await?;
+            }
+            "twitter.new" => {
+                self.handle_twitter_event(&event).await?;
             }
             "market.trade" => {
                 if let Ok(trade_event) =
@@ -521,6 +539,85 @@ impl NewsWebSocketService {
         println!(
             "[VOLATILITY-WS] Sent gold volatility alert to {} channels",
             channels.len(),
+        );
+
+        Ok(())
+    }
+
+    async fn handle_twitter_event(
+        &self,
+        event: &NewsEvent,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let data = event.data.as_ref().ok_or("No data in twitter event")?;
+        let discord_embed = data
+            .discord_embed
+            .as_ref()
+            .ok_or("No embed in twitter event")?;
+
+        // Extract tweet_id from the tweet data field
+        let tweet = data.tweet.as_ref().ok_or("No tweet in twitter event")?;
+
+        if TwitterRepository::is_tweet_sent(&self.db, &tweet.id).await? {
+            return Ok(());
+        }
+
+        let channels = TwitterRepository::get_active_channels(&self.db).await?;
+
+        if channels.is_empty() {
+            return Ok(());
+        }
+
+        let mut embed = CreateEmbed::new();
+
+        if let Some(title) = &discord_embed.title {
+            embed = embed.title(title);
+        }
+        if let Some(desc) = &discord_embed.description {
+            embed = embed.description(desc);
+        }
+        if let Some(url) = &discord_embed.url {
+            embed = embed.url(url);
+        }
+        if let Some(color) = discord_embed.color {
+            embed = embed.color(color);
+        }
+        if let Some(fields) = &discord_embed.fields {
+            for field in fields {
+                embed = embed.field(&field.name, &field.value, field.inline);
+            }
+        }
+        if let Some(thumbnail) = &discord_embed.thumbnail {
+            embed = embed.thumbnail(&thumbnail.url);
+        }
+        if let Some(footer) = &discord_embed.footer {
+            embed = embed.footer(poise::serenity_prelude::CreateEmbedFooter::new(
+                &footer.text,
+            ));
+        }
+        embed = embed.timestamp(poise::serenity_prelude::Timestamp::now());
+
+        let author_name = tweet.author_username.clone();
+
+        for channel in &channels {
+            let channel_id = ChannelId::new(channel.channel_id as u64);
+
+            let message = CreateMessage::new().embed(embed.clone());
+
+            if let Err(e) = channel_id.send_message(&self.http, message).await {
+                println!(
+                    "[TWITTER-WS] Failed to send to channel {}: {}",
+                    channel.channel_id, e
+                );
+            }
+        }
+
+        TwitterRepository::insert_tweet(&self.db, &tweet.id, &author_name).await?;
+
+        println!(
+            "[TWITTER-WS] Sent tweet to {} channels: @{} - {}",
+            channels.len(),
+            tweet.author_username,
+            tweet.id
         );
 
         Ok(())

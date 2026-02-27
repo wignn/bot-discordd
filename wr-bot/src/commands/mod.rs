@@ -10,6 +10,7 @@ pub mod music;
 pub mod ping;
 pub mod stock;
 pub mod sys;
+pub mod twitter;
 pub mod volatility;
 
 use crate::repository::DbPool;

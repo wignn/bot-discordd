@@ -23,6 +23,10 @@ type Config struct {
 	InfowayForexSymbols  string
 	InfowayCryptoSymbols string
 	InfowayStockSymbols  string
+
+	RSSHubURL  string
+	XUsernames string
+	XPollSec   int
 }
 
 func Load() *Config {
@@ -43,6 +47,10 @@ func Load() *Config {
 		InfowayForexSymbols:  getEnv("INFOWAY_FOREX_SYMBOLS", "EURUSD,GBPUSD,USDJPY,XAUUSD"),
 		InfowayCryptoSymbols: getEnv("INFOWAY_CRYPTO_SYMBOLS", "BTCUSDT,ETHUSDT"),
 		InfowayStockSymbols:  getEnv("INFOWAY_STOCK_SYMBOLS", "NAS100,SPX500"),
+
+		RSSHubURL:  getEnv("RSSHUB_URL", "http://rsshub:1200"),
+		XUsernames: getEnv("X_USERNAMES", ""),
+		XPollSec:   getEnvInt("X_POLL_SEC", 60),
 	}
 
 	cfg.DatabaseURL = strings.Replace(cfg.DatabaseURL, "postgresql+asyncpg://", "postgres://", 1)

@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS twitter_channels (
+    id BIGSERIAL PRIMARY KEY,
+    guild_id BIGINT NOT NULL UNIQUE,
+    channel_id BIGINT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS twitter_sent (
+    id BIGSERIAL PRIMARY KEY,
+    tweet_id TEXT NOT NULL UNIQUE,
+    author TEXT NOT NULL,
+    sent_at BIGINT NOT NULL
+);

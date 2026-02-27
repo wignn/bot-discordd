@@ -155,11 +155,30 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			// Wait for price cache to populate
 			time.Sleep(30 * time.Second)
 			volatilityPipeline.Run(ctx)
 		}()
 		slog.Info("gold volatility spike detector enabled")
+	}
+
+	if cfg.XUsernames != "" {
+		twitterTimeout := time.Duration(cfg.ScraperTimeout) * time.Second
+		twitterCollector := collector.NewTwitterCollector(cfg.RSSHubURL, twitterTimeout)
+		twitterPipeline := pipeline.NewTwitterPipeline(twitterCollector, hub, cfg.XUsernames)
+
+		twitterInterval := time.Duration(cfg.XPollSec) * time.Second
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			time.Sleep(3 * time.Second)
+			twitterPipeline.Run(ctx, twitterInterval)
+		}()
+		slog.Info("twitter feed pipeline enabled (rsshub)",
+			"rsshub_url", cfg.RSSHubURL,
+			"usernames", cfg.XUsernames,
+			"interval", twitterInterval,
+		)
 	}
 
 	slog.Info("news-server running", "port", cfg.ServerPort)

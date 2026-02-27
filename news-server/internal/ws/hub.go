@@ -126,6 +126,7 @@ func (h *Hub) HandleWS(w http.ResponseWriter, r *http.Request) {
 			"calendar":    true,
 			"market_data": true,
 			"volatility":  true,
+			"twitter":     true,
 			"system":      true,
 		},
 	}
