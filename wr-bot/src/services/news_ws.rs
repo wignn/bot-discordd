@@ -77,6 +77,7 @@ pub struct DiscordEmbed {
     pub color: Option<u32>,
     pub fields: Option<Vec<EmbedField>>,
     pub thumbnail: Option<EmbedThumbnail>,
+    pub image: Option<EmbedImage>,
     pub timestamp: Option<String>,
     pub footer: Option<EmbedFooter>,
 }
@@ -91,6 +92,11 @@ pub struct EmbedField {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbedThumbnail {
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbedImage {
     pub url: String,
 }
 
@@ -588,6 +594,9 @@ impl NewsWebSocketService {
         }
         if let Some(thumbnail) = &discord_embed.thumbnail {
             embed = embed.thumbnail(&thumbnail.url);
+        }
+        if let Some(image) = &discord_embed.image {
+            embed = embed.image(&image.url);
         }
         if let Some(footer) = &discord_embed.footer {
             embed = embed.footer(poise::serenity_prelude::CreateEmbedFooter::new(

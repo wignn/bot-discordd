@@ -219,5 +219,11 @@ func BuildTwitterEmbed(t TwitterTweetData) map[string]interface{} {
 		}
 	}
 
+	if len(t.MediaURLs) > 0 {
+		result["image"] = map[string]interface{}{
+			"url": t.MediaURLs[0],
+		}
+	}
+
 	return result
 }
