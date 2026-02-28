@@ -13,6 +13,7 @@ type TwitterPipeline struct {
 	collector *collector.TwitterCollector
 	hub       *ws.Hub
 	usernames string
+	seeded    bool
 }
 
 func NewTwitterPipeline(
@@ -29,9 +30,7 @@ func NewTwitterPipeline(
 
 func (p *TwitterPipeline) Run(ctx context.Context, interval time.Duration) {
 	slog.Info("twitter pipeline: starting", "interval", interval, "usernames", p.usernames)
-
-	// Initial fetch
-	p.tick()
+	p.seed()
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -45,6 +44,18 @@ func (p *TwitterPipeline) Run(ctx context.Context, interval time.Duration) {
 			p.tick()
 		}
 	}
+}
+
+func (p *TwitterPipeline) seed() {
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("twitter pipeline: seed panic recovered", "panic", r)
+		}
+	}()
+
+	tweets := p.collector.FetchTweets(p.usernames)
+	p.seeded = true
+	slog.Info("twitter pipeline: seeded (skipped broadcast)", "tweets_seen", len(tweets))
 }
 
 func (p *TwitterPipeline) tick() {
