@@ -62,7 +62,6 @@ type TwitterCollector struct {
 }
 
 func NewTwitterCollector(rsshubURL string, timeout time.Duration) *TwitterCollector {
-	// Strip trailing slash
 	rsshubURL = strings.TrimRight(rsshubURL, "/")
 
 	return &TwitterCollector{

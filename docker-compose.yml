@@ -21,17 +21,15 @@ services:
       retries: 5
 
   rsshub:
-    image: diygod/rsshub:latest
-    container_name: rsshub
-    restart: unless-stopped
-    environment:
-      - NODE_ENV=production
-      - CACHE_TYPE=memory
-      - CACHE_EXPIRE=300
-    ports:
-      - "1200:1200"
-    networks:
-      - forex-network
+      image: diygod/rsshub:latest
+      container_name: rsshub
+      restart: unless-stopped
+      env_file:
+        - .env
+      ports:
+        - "1200:1200"
+      networks:
+        - forex-network
 
   news-server:
     build:
