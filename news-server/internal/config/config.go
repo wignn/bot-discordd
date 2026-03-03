@@ -24,6 +24,10 @@ type Config struct {
 	InfowayCryptoSymbols string
 	InfowayStockSymbols  string
 
+	MT5WSURL     string
+	MT5Symbols   string
+	MT5SymbolMap string
+
 	RSSHubURL  string
 	XUsernames string
 	XPollSec   int
@@ -47,6 +51,10 @@ func Load() *Config {
 		InfowayForexSymbols:  getEnv("INFOWAY_FOREX_SYMBOLS", "EURUSD,GBPUSD,USDJPY,XAUUSD"),
 		InfowayCryptoSymbols: getEnv("INFOWAY_CRYPTO_SYMBOLS", "BTCUSDT,ETHUSDT"),
 		InfowayStockSymbols:  getEnv("INFOWAY_STOCK_SYMBOLS", "NAS100,SPX500"),
+
+		MT5WSURL:     getEnv("MT5_WS_URL", ""),
+		MT5Symbols:   getEnv("MT5_SYMBOLS", "XAUUSDm"),
+		MT5SymbolMap: getEnv("MT5_SYMBOL_MAP", "XAUUSDm:XAUUSD"),
 
 		RSSHubURL:  getEnv("RSSHUB_URL", "http://rsshub:1200"),
 		XUsernames: getEnv("X_USERNAMES", ""),

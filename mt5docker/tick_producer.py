@@ -33,8 +33,7 @@ def handle_client(conn, addr):
                 error = json.dumps({"error": f"Symbol '{symbol}' not found"}) + "\n"
                 conn.sendall(error.encode())
                 break
-
-            # only send if tick changed
+            
             if tick.time_msc != last_tick_time:
                 last_tick_time = tick.time_msc
                 payload = json.dumps({

@@ -48,6 +48,7 @@ func main() {
 		"calendar_interval", cfg.CalendarCheckSec,
 		"stats_interval", cfg.StatsIntervalSec,
 		"infoway_enabled", cfg.InfowayAPIKey != "",
+		"mt5_enabled", cfg.MT5WSURL != "",
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -149,8 +150,31 @@ func main() {
 			infowayPipeline.Run(ctx)
 		}()
 		slog.Info("infoway market data gateway enabled")
+	}
 
-		// Volatility detector requires market data from infoway
+	// MT5Docker market data pipeline
+	var mt5Enabled bool
+	if cfg.MT5WSURL != "" {
+		mt5Pipeline := pipeline.NewMT5Pipeline(
+			cfg.MT5WSURL,
+			cfg.MT5Symbols,
+			cfg.MT5SymbolMap,
+			hub,
+		)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			mt5Pipeline.Run(ctx)
+		}()
+		mt5Enabled = true
+		slog.Info("mt5 market data pipeline enabled",
+			"url", cfg.MT5WSURL,
+			"symbols", cfg.MT5Symbols,
+		)
+	}
+
+	// Volatility detector requires market data from either infoway or mt5
+	if infowayPipeline != nil || mt5Enabled {
 		volatilityPipeline := pipeline.NewVolatilityPipeline(hub)
 		wg.Add(1)
 		go func() {

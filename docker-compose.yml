@@ -21,9 +21,9 @@ services:
       retries: 5
 
   mt5docker:
-    build: 
+    build:
       context: ./mt5docker
-      dockerfile: ./infrastructure/docker/Dockerfile.mt5
+      dockerfile: ../infrastructure/docker/Dockerfile.mt5
     container_name: mt5docker
     environment:
       - MT5_HOST=localhost
@@ -38,17 +38,19 @@ services:
     tty: false
     volumes:
       - mt5_wineprefix:/opt/wineprefix
+    networks:
+      - forex-network
 
   rsshub:
-      image: diygod/rsshub:latest
-      container_name: rsshub
-      restart: unless-stopped
-      env_file:
-        - .env
-      ports:
-        - "1200:1200"
-      networks:
-        - forex-network
+    image: diygod/rsshub:latest
+    container_name: rsshub
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "1200:1200"
+    networks:
+      - forex-network
 
   news-server:
     build:

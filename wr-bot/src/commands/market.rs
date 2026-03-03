@@ -51,7 +51,7 @@ pub async fn price(
                 .field("Updated", &ago, true)
                 .color(color)
                 .footer(poise::serenity_prelude::CreateEmbedFooter::new(
-                    "Fio • Powered by Infoway",
+                    "Fio • Powered by MT5",
                 ))
                 .timestamp(poise::serenity_prelude::Timestamp::now());
 
