@@ -20,6 +20,25 @@ services:
       timeout: 5s
       retries: 5
 
+  mt5docker:
+    build: 
+      context: ./mt5docker
+      dockerfile: ./infrastructure/docker/Dockerfile.mt5
+    container_name: mt5docker
+    environment:
+      - MT5_HOST=localhost
+      - VNC_PWD=changeme123
+    ports:
+      - 5901:5901
+      - 6081:6081
+      - 8001:8001
+      - 8765:8765
+    restart: "no"
+    stdin_open: true
+    tty: false
+    volumes:
+      - mt5_wineprefix:/opt/wineprefix
+
   rsshub:
       image: diygod/rsshub:latest
       container_name: rsshub
@@ -140,3 +159,4 @@ networks:
 volumes:
   postgres_data:
   bot_data:
+  mt5_wineprefix:
