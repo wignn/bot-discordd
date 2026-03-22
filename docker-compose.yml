@@ -38,6 +38,7 @@ services:
     tty: false
     volumes:
       - mt5_wineprefix:/opt/wineprefix
+      - ./mt5docker:/mt5docker
     networks:
       - forex-network
 
