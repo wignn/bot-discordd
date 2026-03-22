@@ -24,14 +24,28 @@ def handle_client(conn, addr):
         symbol = data.decode().strip()
         print(f"[tick_producer] Streaming ticks for: {symbol}")
 
-        mt5.symbol_select(symbol, True)
+        if not mt5.symbol_select(symbol, True):
+            error = json.dumps({"error": f"Symbol '{symbol}' not available"}) + "\n"
+            conn.sendall(error.encode())
+            return
+
+        # wait for symbol to load in Market Watch
+        tick = None
+        for _ in range(10):
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is not None:
+                break
+            time.sleep(0.5)
+
+        if tick is None:
+            error = json.dumps({"error": f"Symbol '{symbol}' not found (timeout waiting for tick data)"}) + "\n"
+            conn.sendall(error.encode())
+            return
 
         last_tick_time = 0
         while True:
             tick = mt5.symbol_info_tick(symbol)
             if tick is None:
-                error = json.dumps({"error": f"Symbol '{symbol}' not found"}) + "\n"
-                conn.sendall(error.encode())
                 break
             
             if tick.time_msc != last_tick_time:
