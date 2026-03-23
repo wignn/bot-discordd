@@ -3,6 +3,7 @@ import './LivePrice.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const WS_URL = import.meta.env.VITE_WS_URL || '';
+const PRICE_WS_URL = import.meta.env.VITE_PRICE_WS_URL || WS_URL;
 
 const SYMBOL_INFO = {
     XAUUSD: { label: 'Gold', decimals: 2 },
@@ -39,10 +40,10 @@ export default function LivePrice() {
     }, []);
 
     useEffect(() => {
-        if (!WS_URL) return;
+        if (!PRICE_WS_URL) return;
 
         const connect = () => {
-            const wsUrl = `${WS_URL}/api/v1/stream/ws?client_type=price-ticker&client_id=web-price-${Date.now()}`;
+            const wsUrl = PRICE_WS_URL;
             const ws = new WebSocket(wsUrl);
             wsRef.current = ws;
 

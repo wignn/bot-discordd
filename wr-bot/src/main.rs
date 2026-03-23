@@ -17,6 +17,7 @@ use worm::handlers::{handle_event, handle_track_end, on_error};
 use worm::repository::create_pool;
 use worm::services::music::MusicPlayer;
 use worm::services::news_ws::start_news_ws_service;
+use worm::services::price_ws::start_price_ws_service;
 
 #[tokio::main]
 async fn main() -> Result<(), BotError> {
@@ -294,6 +295,13 @@ async fn main() -> Result<(), BotError> {
     println!(
         "[OK] News WebSocket service started (connecting to {})",
         news_ws_url
+    );
+
+    let price_ws_url = env::var("PRICE_WS_URL").unwrap_or_else(|_| "ws://localhost:4000".to_string());
+    start_price_ws_service(db_for_checker, http.clone(), price_ws_url.clone());
+    println!(
+        "[OK] Price WebSocket service started (connecting to {})",
+        price_ws_url
     );
 
     let stock_ws_url = env::var("STOCK_WS_URL").unwrap_or_else(|_| news_ws_url.clone());

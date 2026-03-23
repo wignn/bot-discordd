@@ -1,0 +1,6 @@
+[install]
+auto = "force"
+
+[run]
+# Use node's ws module instead of Bun's built-in to fix TradingView compatibility
+external = ["ws"]

@@ -20,27 +20,6 @@ services:
       timeout: 5s
       retries: 5
 
-  mt5docker:
-    build:
-      context: ./mt5docker
-      dockerfile: ../infrastructure/docker/Dockerfile.mt5
-    container_name: mt5docker
-    environment:
-      - MT5_HOST=localhost
-      - VNC_PWD=changeme123
-    ports:
-      - 5901:5901
-      - 6081:6081
-      - 8001:8001
-      - 8765:8765
-    restart: "no"
-    stdin_open: true
-    tty: false
-    volumes:
-      - mt5_wineprefix:/opt/wineprefix
-      - ./mt5docker:/mt5docker
-    networks:
-      - forex-network
 
   rsshub:
     image: diygod/rsshub:latest
@@ -85,6 +64,7 @@ services:
       - RUST_LOG=info
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/forex
       - NEWS_WS_URL=ws://news-server:8000
+      - PRICE_WS_URL=ws://price:4000
       - FOREX_SERVICE_URL=http://news-server:8000
     env_file:
       - ./wr-bot/.env
@@ -136,6 +116,21 @@ services:
     profiles:
       - admin
 
+  price:
+    build:
+      context: ./price
+    container_name: price-server
+    image: wign/price-server:latest
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - SYMBOLS=FX:XAUUSD,FX:EURUSD,FX:GBPUSD,FX:USDJPY,BINANCE:BTCUSDT,BINANCE:ETHUSDT,BINANCE:SOLUSDT,BINANCE:BNBUSDT
+      - LOG_LEVEL=info
+    networks:
+      - forex-network
+
   frontend:
     build:
       context: ./frontend
@@ -143,6 +138,7 @@ services:
       args:
         VITE_API_URL: https://api.wign.cloud
         VITE_WS_URL: wss://api.wign.cloud
+        VITE_PRICE_WS_URL: ws://localhost:4000
     container_name: forex-frontend
     image: wign/forex-frontend:latest
     restart: unless-stopped
@@ -162,4 +158,3 @@ networks:
 volumes:
   postgres_data:
   bot_data:
-  mt5_wineprefix:
