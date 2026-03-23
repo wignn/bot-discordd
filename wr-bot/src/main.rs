@@ -291,7 +291,7 @@ async fn main() -> Result<(), BotError> {
 
     let news_ws_url = env::var("NEWS_WS_URL").unwrap_or_else(|_| "ws://news-api:8000".to_string());
     let bot_id = env::var("CLIENT_ID").unwrap_or_else(|_| "discord-bot".to_string());
-    start_news_ws_service(db_for_checker, http.clone(), news_ws_url.clone(), bot_id);
+    start_news_ws_service(db_for_checker.clone(), http.clone(), news_ws_url.clone(), bot_id);
     println!(
         "[OK] News WebSocket service started (connecting to {})",
         news_ws_url
