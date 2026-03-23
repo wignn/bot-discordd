@@ -138,7 +138,7 @@ services:
       args:
         VITE_API_URL: https://api.wign.cloud
         VITE_WS_URL: wss://api.wign.cloud
-        VITE_PRICE_WS_URL: ws://localhost:4000
+        VITE_PRICE_WS_URL: wss://price.wign.cloud
     container_name: forex-frontend
     image: wign/forex-frontend:latest
     restart: unless-stopped
