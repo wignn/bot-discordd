@@ -97,17 +97,6 @@ func main() {
 	stockPipeline := pipeline.NewStockPipeline(stockCollector, db, hub)
 	calendarPipeline := pipeline.NewCalendarPipeline(calendarCollector, hub)
 
-	var infowayPipeline *pipeline.InfowayPipeline
-	if cfg.InfowayAPIKey != "" {
-		infowayPipeline = pipeline.NewInfowayPipeline(
-			cfg.InfowayAPIKey,
-			cfg.InfowayForexSymbols,
-			cfg.InfowayCryptoSymbols,
-			cfg.InfowayStockSymbols,
-			hub,
-		)
-	}
-
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -143,47 +132,8 @@ func main() {
 		})
 	}()
 
-	if infowayPipeline != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			infowayPipeline.Run(ctx)
-		}()
-		slog.Info("infoway market data gateway enabled")
-	}
 
-	// MT5Docker market data pipeline
-	var mt5Enabled bool
-	if cfg.MT5WSURL != "" {
-		mt5Pipeline := pipeline.NewMT5Pipeline(
-			cfg.MT5WSURL,
-			cfg.MT5Symbols,
-			cfg.MT5SymbolMap,
-			hub,
-		)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			mt5Pipeline.Run(ctx)
-		}()
-		mt5Enabled = true
-		slog.Info("mt5 market data pipeline enabled",
-			"url", cfg.MT5WSURL,
-			"symbols", cfg.MT5Symbols,
-		)
-	}
 
-	// Volatility detector requires market data from either infoway or mt5
-	if infowayPipeline != nil || mt5Enabled {
-		volatilityPipeline := pipeline.NewVolatilityPipeline(hub)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			time.Sleep(30 * time.Second)
-			volatilityPipeline.Run(ctx)
-		}()
-		slog.Info("gold volatility spike detector enabled")
-	}
 
 	if cfg.XUsernames != "" {
 		twitterTimeout := time.Duration(cfg.ScraperTimeout) * time.Second

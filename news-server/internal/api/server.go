@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/wign/news-server/internal/stats"
 	"github.com/wign/news-server/internal/ws"
@@ -58,7 +57,6 @@ func (s *Server) Start() error {
 	RegisterNewsRoutes(mux, s.db)
 	RegisterStockRoutes(mux, s.db)
 	RegisterScrapingRoutes(mux)
-	RegisterMarketRoutes(mux)
 
 	handler := corsMiddleware(s.auth.Wrap(mux))
 
