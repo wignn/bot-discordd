@@ -1,11 +1,9 @@
 use std::env;
-use std::fs;
 
 #[derive(Clone, Debug)]
 pub struct Config {
     pub token: String,
     pub client_id: String,
-    pub prompt: String,
     pub scraping_base_url: String,
 }
 
@@ -22,20 +20,7 @@ impl Config {
         Ok(Self {
             token,
             client_id,
-            prompt,
             scraping_base_url,
         })
-    }
-
-    pub fn is_openrouter_enabled(&self) -> bool {
-        self.openrouter_api_key.is_some()
-    }
-
-    pub fn is_gemini_enabled(&self) -> bool {
-        !self.gemini_api_key.is_empty()
-    }
-
-    pub fn is_ai_enabled(&self) -> bool {
-        self.is_openrouter_enabled() || self.is_gemini_enabled()
     }
 }
