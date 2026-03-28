@@ -30,7 +30,6 @@ COPY .sqlx ./.sqlx
 COPY migrations ./migrations
 COPY src ./src
 COPY Cargo.toml Cargo.lock ./
-COPY system-prompt.txt gemini_prompt.txt ./
 
 ENV SQLX_OFFLINE=true
 RUN cargo build --release
