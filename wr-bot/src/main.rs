@@ -107,7 +107,6 @@ async fn main() -> Result<(), BotError> {
                 stock::stocknews(),
                 stock::search(),
                 stock::market(),
-                mean::mean(),
                 // Market price commands
                 market::price(),
                 market::prices(),
