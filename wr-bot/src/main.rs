@@ -50,18 +50,6 @@ async fn main() -> Result<(), BotError> {
         println!("[WARN] Failed to load price alerts to cache: {}", e);
     }
 
-    if config.is_openrouter_enabled() {
-        println!("[OK] OpenRouter AI enabled (worm command)");
-    } else {
-        println!("[WARN] OpenRouter AI disabled (no API_KEY configured)");
-    }
-
-    if config.is_gemini_enabled() {
-        println!("[OK] Gemini AI enabled");
-    } else {
-        println!("[WARN] Gemini AI disabled (no GEMINI_API_KEY configured)");
-    }
-
     let owners_clone = owners.clone();
     let db_for_checker = db.clone();
     let db_for_setup = db.clone();
