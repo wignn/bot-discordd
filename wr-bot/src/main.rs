@@ -4,7 +4,7 @@ use serenity::all::{ActivityData, GatewayIntents, OnlineStatus};
 use std::collections::HashSet;
 use std::env;
 use worm::commands::{
-    Data, admin, ai, calendar, forex, general, market, mean, moderation, ping, stock, sys,
+    Data, admin, calendar, forex, general, market, moderation, ping, stock, sys,
     twitter, volatility,
 };
 use worm::config::Config;
