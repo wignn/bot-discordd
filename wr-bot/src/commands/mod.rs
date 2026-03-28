@@ -1,12 +1,9 @@
 pub mod admin;
-pub mod ai;
 pub mod calendar;
 pub mod forex;
 pub mod general;
 pub mod market;
-pub mod mean;
 pub mod moderation;
-pub mod music;
 pub mod ping;
 pub mod stock;
 pub mod sys;
@@ -14,20 +11,13 @@ pub mod twitter;
 pub mod volatility;
 
 use crate::repository::DbPool;
-use crate::services::music::MusicPlayer;
-use crate::services::youtube::YouTubeSearch;
 use poise::serenity_prelude::UserId;
-use songbird::Songbird;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct Data {
     pub owners: HashSet<UserId>,
     pub db: DbPool,
-    pub music_player: Option<MusicPlayer>,
-    pub songbird: Arc<Songbird>,
-    pub youtube_search: Option<YouTubeSearch>,
 }
 
 impl std::fmt::Debug for Data {
@@ -35,9 +25,6 @@ impl std::fmt::Debug for Data {
         f.debug_struct("Data")
             .field("owners", &self.owners)
             .field("db", &"Arc<PgPool>")
-            .field("music_player", &self.music_player)
-            .field("songbird", &"Arc<Songbird>")
-            .field("youtube_search", &self.youtube_search.is_some())
             .finish()
     }
 }

@@ -1,6 +1,5 @@
 use crate::commands::Data;
 use crate::repository::ModerationRepository;
-use crate::services::music::player::get_bot_user_id;
 use crate::utils::embed;
 use serenity::all::{ChannelId, Context, CreateMessage, FullEvent, GuildId, Member, RoleId, User};
 
@@ -53,83 +52,11 @@ async fn handle_voice_state_update(
     let old_channel = old.as_ref().and_then(|vs| vs.channel_id);
     let new_channel = new.channel_id;
 
-    if old_channel.is_some() && old_channel != new_channel {
-        if let Some(guild_id) = new.guild_id {
-            if let Some(left_channel_id) = old_channel {
-                handle_auto_disconnect(ctx, data, guild_id, left_channel_id).await;
-            }
-        }
-    }
-
     if let Some(guild_id) = new.guild_id {
         handle_voice_logging(ctx, data, guild_id, old_channel, new_channel, new.user_id).await?;
     }
 
     Ok(())
-}
-
-async fn handle_auto_disconnect(
-    ctx: &Context,
-    data: &Data,
-    guild_id: GuildId,
-    left_channel_id: ChannelId,
-) {
-    let bot_user_id = match get_bot_user_id() {
-        Some(id) => id,
-        None => return,
-    };
-
-    let should_disconnect = {
-        if let Some(guild) = ctx.cache.guild(guild_id) {
-            let bot_in_channel = guild
-                .voice_states
-                .get(&bot_user_id)
-                .and_then(|vs| vs.channel_id)
-                .map(|ch| ch == left_channel_id)
-                .unwrap_or(false);
-
-            if bot_in_channel {
-                let users_in_channel = guild
-                    .voice_states
-                    .iter()
-                    .filter(|(user_id, vs)| {
-                        vs.channel_id == Some(left_channel_id) && **user_id != bot_user_id
-                    })
-                    .count();
-
-                println!("[MUSIC] Users remaining in channel: {}", users_in_channel);
-                users_in_channel == 0
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    };
-
-    if should_disconnect {
-        println!("[MUSIC] No users in voice channel, auto-disconnecting...");
-
-        if let Some(player) = &data.music_player {
-            if let Some(player_ctx) = player.get_player_context(guild_id) {
-                let _ = player_ctx.close();
-            }
-            let lavalink_guild_id = lavalink_rs::model::GuildId(guild_id.get());
-            let _ = player.lavalink.delete_player(lavalink_guild_id).await;
-            player.clear_queue(guild_id);
-            player.remove_queue(guild_id);
-        }
-
-        let _ = data.songbird.leave(guild_id).await;
-
-        if let Some(player) = &data.music_player {
-            if let Some(channel_id) = player.get_text_channel(guild_id) {
-                let embed_msg = embed::info("Disconnect", "Left voice channel.");
-                let message = CreateMessage::new().embed(embed_msg);
-                let _ = channel_id.send_message(&ctx.http, message).await;
-            }
-        }
-    }
 }
 
 /// Log voice channel join/leave events
